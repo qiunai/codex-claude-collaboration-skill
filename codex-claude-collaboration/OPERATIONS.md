@@ -11,15 +11,15 @@ verification and the FIFO Desktop lock.
 Workflow type ownership:
 
 - Codex owns `FULL_CODEX_FIRST`. It sets this when Codex initiated exploration,
-  writes `workflow_type=FULL_CODEX_FIRST` and `origin_codex_session_id` into the
+  writes `workflow_type=FULL_CODEX_FIRST` and `origin_codex_thread_id` into the
   state file, and includes both fields in the prompt sent to Claude.
 - Claude owns `CLAUDE_FIRST`. It sets this only when the user started in Claude
-  and there is no prior Codex session id.
+  and there is no prior Codex thread id.
 - Claude must never downgrade `FULL_CODEX_FIRST` to `CLAUDE_FIRST`. If the
-  prompt says `FULL_CODEX_FIRST` but no origin Codex session id is available,
+  prompt says `FULL_CODEX_FIRST` but no origin Codex thread id is available,
   stop instead of creating a new Codex thread.
-- `origin_codex_session_id` identifies the originating Codex conversation for
-  audit, and `origin_codex_thread_id` is the broker resume target.
+- `origin_codex_thread_id` is the broker resume target. If a UI labels the same
+  value as "Codex session ID", still store and pass it as thread id.
 - Use `codex-companion task --resume-thread <thread-id>` for automated
   collaboration routing. Do not use `--resume-last`; it searches for the latest
   resumable task thread in the current context and can select the wrong thread
@@ -108,15 +108,21 @@ DESKTOP_SESSION_TITLE=$(echo "$PROJECT_CONTEXT" | jq -r '.desktop_session_title'
 DESKTOP_GROUP_NAME=$(echo "$PROJECT_CONTEXT" | jq -r '.desktop_group_name')
 ```
 
-Resolve the current Codex session. In a `FULL_CODEX_FIRST` workflow this value
+Resolve the current Codex thread. In a `FULL_CODEX_FIRST` workflow this value
 is mandatory; if the runtime cannot provide it, stop and ask the user for the
-current Codex session id instead of sending to Claude.
+current Codex thread id instead of sending to Claude.
 
 ```bash
-CODEX_SESSION_CONTEXT=$(node "$SKILL_DIR/scripts/codex-session-context.mjs" \
-  --session-id "$CURRENT_CODEX_SESSION_ID")
+CURRENT_CODEX_THREAD_ID="${CODEX_THREAD_ID:-}"
+if [ -z "$CURRENT_CODEX_THREAD_ID" ]; then
+  echo "ERROR: CODEX_THREAD_ID is required for FULL_CODEX_FIRST"
+  exit 2
+fi
 
-ORIGIN_CODEX_SESSION_ID=$(echo "$CODEX_SESSION_CONTEXT" | jq -r '.origin_codex_session_id')
+CODEX_SESSION_CONTEXT=$(node "$SKILL_DIR/scripts/codex-session-context.mjs" \
+  --thread-id "$CURRENT_CODEX_THREAD_ID")
+
+ORIGIN_CODEX_SESSION_ID=$(echo "$CODEX_SESSION_CONTEXT" | jq -r '.origin_codex_session_id // empty')
 ORIGIN_CODEX_THREAD_ID=$(echo "$CODEX_SESSION_CONTEXT" | jq -r '.origin_codex_thread_id')
 WORKFLOW_TYPE=$(echo "$CODEX_SESSION_CONTEXT" | jq -r '.workflow_type')
 CODEX_RESUME_REQUIRED=$(echo "$CODEX_SESSION_CONTEXT" | jq -r '.codex_resume_required')
@@ -129,7 +135,6 @@ Render `templates/claude-review-packet.md` with:
 - `CLAUDE_SESSION_JSONL_PATH`
 - `CLAUDE_SESSION_TITLE`
 - `WORKFLOW_TYPE`
-- `ORIGIN_CODEX_SESSION_ID`
 - `ORIGIN_CODEX_THREAD_ID`
 - `CODEX_RESUME_REQUIRED`
 - `ITERATION_VERSION`
@@ -174,7 +179,6 @@ node "$SKILL_DIR/scripts/state.mjs" init \
   --desktop-model-policy LATEST_OPUS \
   --desktop-reasoning-level EXTRA_HIGH \
   --workflow-type "$WORKFLOW_TYPE" \
-  --origin-codex-session-id "$ORIGIN_CODEX_SESSION_ID" \
   --origin-codex-thread-id "$ORIGIN_CODEX_THREAD_ID" \
   --codex-explore-summary-path ".codex-claude-collaboration/codex-explore-summary.md" \
   --claude-packet-path ".codex-claude-collaboration/claude-review-packet.md"
@@ -217,8 +221,8 @@ Computer Use mechanical sequence for this phase:
 10. Run `phase-guard.mjs` again. If it fails, do not type into Claude Desktop.
 11. Paste/send the rendered prompt. It must begin exactly with
    `/openspec:explore `, including the space after `explore`.
-   The body must include `Workflow type`, `Origin Codex session`,
-   `Origin Codex thread`, and `Codex continuity required`.
+   The body must include `Workflow type`, `Origin Codex thread`, and
+   `Codex continuity required`.
 12. After send, if the session appears under `Ungrouped`, open the session menu,
    choose `Rename`, and set `$DESKTOP_SESSION_TITLE` such as
    `V1.13 editor optimization`.
@@ -253,14 +257,14 @@ Before starting Codex, Claude determines workflow type:
 ```bash
 WORKFLOW_TYPE="${WORKFLOW_TYPE:-CLAUDE_FIRST}"
 
-if [ "$WORKFLOW_TYPE" = "FULL_CODEX_FIRST" ] && [ -z "${ORIGIN_CODEX_SESSION_ID:-}" ]; then
-  echo "ERROR: FULL_CODEX_FIRST requires ORIGIN_CODEX_SESSION_ID"
+if [ "$WORKFLOW_TYPE" = "FULL_CODEX_FIRST" ] && [ -z "${ORIGIN_CODEX_THREAD_ID:-}" ]; then
+  echo "ERROR: FULL_CODEX_FIRST requires ORIGIN_CODEX_THREAD_ID"
   exit 2
 fi
 ```
 
 For `FULL_CODEX_FIRST`, these values come from the Codex packet Claude received.
-For `CLAUDE_FIRST`, there is no origin Codex session id and Claude creates the
+For `CLAUDE_FIRST`, there is no origin Codex thread id and Claude creates the
 first Codex task thread.
 
 For every product iteration, Claude's proposal/tasks must identify:
@@ -359,18 +363,24 @@ Claude session's most recent task.
 cd "$CODEX_WORKTREE"
 unset OPENAI_API_KEY
 export CODEX_CLAUDE_COLLABORATION_FULL_ACCESS=1
-CODEX_COMPANION="${CODEX_COMPANION:-codex-companion}"
+CODEX_COMPANION="${CODEX_COMPANION:-$HOME/.claude/plugins/marketplaces/openai-codex/plugins/codex/scripts/codex-companion.mjs}"
+node "$SKILL_DIR/scripts/verify-codex-companion.mjs" --command "$CODEX_COMPANION"
+if [[ "$CODEX_COMPANION" == *.mjs ]]; then
+  CODEX_COMPANION_CMD=(node "$CODEX_COMPANION")
+else
+  CODEX_COMPANION_CMD=("$CODEX_COMPANION")
+fi
 
 if [ "$WORKFLOW_TYPE" = "FULL_CODEX_FIRST" ]; then
   if [ -z "${ORIGIN_CODEX_THREAD_ID:-}" ]; then
     echo "ERROR: FULL_CODEX_FIRST requires ORIGIN_CODEX_THREAD_ID"
     exit 2
   fi
-  JOB_OUT=$("$CODEX_COMPANION" \
+  JOB_OUT=$("${CODEX_COMPANION_CMD[@]}" \
     task --resume-thread "$ORIGIN_CODEX_THREAD_ID" --background --write --json \
     "$(cat "$CODEX_WORKTREE/.codex-claude-collaboration/goal.round-1.md")")
 else
-  JOB_OUT=$("$CODEX_COMPANION" \
+  JOB_OUT=$("${CODEX_COMPANION_CMD[@]}" \
     task --background --write --json \
     "$(cat "$CODEX_WORKTREE/.codex-claude-collaboration/goal.round-1.md")")
 fi

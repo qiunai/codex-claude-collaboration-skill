@@ -24,7 +24,7 @@ Claude's proposal artifacts.
 
 工作流来源:
 - `FULL_CODEX_FIRST`:用户先在 Codex 探索,Claude 后续生成 proposal。此时原始
-  Codex session/worktree 可能基于 main,所以实现必须以当前 `{{CODEX_WORKTREE}}`
+  Codex thread/worktree 可能基于 main,所以实现必须以当前 `{{CODEX_WORKTREE}}`
   的 proposal 分支内容为准,不能假设原始探索 worktree 里已有 proposal。
 - `CLAUDE_FIRST`:用户先在 Claude 探索并生成 proposal,Codex 任务应直接从 Claude
   推送的 proposal 分支 worktree 创建。

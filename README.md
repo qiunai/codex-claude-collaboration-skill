@@ -65,6 +65,10 @@ session.
 - Exact broker continuity uses `codex-companion task --resume-thread <thread-id>`.
   Do not use `--resume-last` for automated collaboration routing when multiple
   Claude/Codex tasks may be active.
+- Verify the actual executable before dispatch:
+  `node ~/.claude/skills/codex-claude-collaboration/scripts/verify-codex-companion.mjs --command "$CODEX_COMPANION"`.
+  If `CODEX_COMPANION` points at a `.mjs` plugin script, the workflow invokes it
+  through `node`.
 - Optional but recommended: OpenSpec commands available in the target project.
 
 No personal paths, local project names, tokens, or state files are required by
@@ -129,11 +133,13 @@ findings before implementation.
      --summary "editor optimization" \
      --expected-project "$(basename "$(git rev-parse --show-toplevel)")"
    ```
-4. Codex captures the current Codex session:
+4. Codex captures the current Codex thread:
    ```bash
    node ~/.codex/skills/codex-claude-collaboration/scripts/codex-session-context.mjs \
-     --session-id "$CURRENT_CODEX_SESSION_ID"
+     --thread-id "$CODEX_THREAD_ID"
    ```
+   Use the Codex thread id as the resume target. Some UI output may call this
+   value a "Codex session ID", but the broker parameter is `thread-id`.
 5. Codex sends a Claude Desktop prompt that starts with:
    ```text
    /openspec:explore 
@@ -180,9 +186,8 @@ proposal.
 ## Safety Rules
 
 - Do not infer workflow type. The entry agent must set it.
-- `FULL_CODEX_FIRST` requires `origin_codex_session_id` and
-  `origin_codex_thread_id`.
-- `CLAUDE_FIRST` is only for cases with no prior Codex session.
+- `FULL_CODEX_FIRST` requires `origin_codex_thread_id`.
+- `CLAUDE_FIRST` is only for cases with no prior Codex thread.
 - Use `codex-companion task --resume-thread <thread-id>` for Codex re-entry.
 - Treat `--resume-last` as unsafe for automated routing: it means "latest
   resumable task in the current context", not "the task that belongs to this

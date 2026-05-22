@@ -46,9 +46,10 @@ improve the result instead of inheriting an overconfident conclusion.
 ## Workflow Types
 
 - `FULL_CODEX_FIRST`: the user started in Codex, Codex explored first, and the
-  packet sent to Claude must include `origin_codex_session_id` and
-  `origin_codex_thread_id`. When Claude later sends the proposal back to Codex,
-  it must target that exact Codex thread with
+  packet sent to Claude must include `origin_codex_thread_id`. This is the
+  Codex app-server thread id and the only value used for re-entry. When Claude
+  later sends the proposal back to Codex, it must target that exact Codex thread
+  with
   `codex-companion task --resume-thread <origin_codex_thread_id>`.
 - `CLAUDE_FIRST`: the user started in Claude and there is no prior Codex
   session. Claude may create the first Codex task thread for implementation.
@@ -57,22 +58,26 @@ Workflow type is not inferred:
 
 - Codex sets `FULL_CODEX_FIRST` when it sends an exploration packet to Claude.
   Codex writes it into state and into the Claude prompt together with
-  `origin_codex_session_id`.
+  `origin_codex_thread_id`.
 - Claude sets `CLAUDE_FIRST` when the user starts in Claude and asks Claude to
-  send a proposal to Codex without a prior Codex session id.
+  send a proposal to Codex without a prior Codex thread id.
 - Claude must preserve `FULL_CODEX_FIRST` from the Codex packet when it later
-  starts implementation. If that marker is present but the origin Codex session
+  starts implementation. If that marker is present but the origin Codex thread
   id is missing, Claude must stop instead of silently changing the workflow
   type.
 
 Broker resume rule:
 
 - Before relying on exact routing, verify the installed broker advertises
-  `task --resume-thread <thread-id>`.
+  `task --resume-thread <thread-id>` with
+  `scripts/verify-codex-companion.mjs --command "$CODEX_COMPANION"`.
 - Current installed `codex-companion` supports exact thread resume:
   `codex-companion task --resume-thread <thread-id>`.
 - `--resume-thread` is wired to Codex app-server `thread/resume`, so it targets
   the supplied thread id instead of searching for the latest thread.
+- Some Codex/companion UI output labels this same value as "Codex session ID";
+  in this skill, call it `origin_codex_thread_id` and pass it only to
+  `--resume-thread`.
 - `--resume-last` means "resolve the latest resumable Codex task thread" for
   the current broker/session/repository context. It is not a safe identity
   mechanism for concurrent Claude sessions and must not be used for automated
@@ -102,7 +107,7 @@ the first UI action.
 - Explore packet delivery must pass:
   `--phase explore-packet`, mode `CODEX_EXPLORE` or `SEND_TO_CLAUDE`,
   `codex_explore_summary_path`, no `implementation_result_path`,
-  `workflow_type=FULL_CODEX_FIRST`, `origin_codex_session_id`,
+  `workflow_type=FULL_CODEX_FIRST`, `origin_codex_thread_id`,
   `iteration_version`, permission mode `BYPASS_PERMISSION`, model policy
   `LATEST_OPUS`, and reasoning level `EXTRA_HIGH`.
 - Implementation result delivery must pass:
@@ -138,16 +143,15 @@ When the user asks Codex to pass investigation results to Claude:
 3. Validate the packet with `scripts/validate-claude-packet.mjs`.
 4. Resolve local Git context with `scripts/project-context.mjs`.
 5. Resolve product version context with `scripts/version-context.mjs`.
-6. Resolve current Codex session context with `scripts/codex-session-context.mjs`;
-   do not send the packet if the current Codex session id is unavailable.
+6. Resolve current Codex thread context with `scripts/codex-session-context.mjs`;
+   do not send the packet if the current Codex thread id is unavailable.
 7. Use Claude Desktop Computer Use to click `New session`, inspect the current
    session controls, and repair any mismatch before sending.
 8. Required repaired state: matching local project, branch `main`, worktree
    enabled, Bypass Permission, newest visible Opus model, and Extra High
    reasoning.
-9. The prompt must include `Workflow type`, `Origin Codex session`,
-   `Origin Codex thread`, `Codex continuity required`, and product iteration
-   version metadata.
+9. The prompt must include `Workflow type`, `Origin Codex thread`,
+   `Codex continuity required`, and product iteration version metadata.
 10. The prompt must start with `/openspec:explore `, including the trailing
    space after the command.
 11. Rename the new session to `Vx.y short summary` and move it into the project

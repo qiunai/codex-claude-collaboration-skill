@@ -98,9 +98,6 @@ if (phase === "explore-packet") {
   if (state.workflow_type !== "FULL_CODEX_FIRST") {
     fail("WRONG_WORKFLOW", "explore packet delivery requires workflow_type=FULL_CODEX_FIRST", { workflow_type: state.workflow_type });
   }
-  if (!state.origin_codex_session_id) {
-    fail("MISSING_CODEX_SESSION", "explore packet delivery must include origin_codex_session_id as the FULL_CODEX_FIRST provenance marker");
-  }
   if (!state.origin_codex_thread_id) {
     fail("MISSING_CODEX_THREAD", "explore packet delivery must include origin_codex_thread_id for exact --resume-thread routing");
   }

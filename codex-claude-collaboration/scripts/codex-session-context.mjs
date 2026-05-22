@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// Normalize the current Codex session id for FULL_CODEX_FIRST workflows.
+// Normalize the current Codex thread id for FULL_CODEX_FIRST workflows.
 
 import process from "node:process";
 
 function usage(message) {
   if (message) console.error(`ERROR: ${message}`);
   console.error(`Usage:
-  codex-session-context.mjs --session-id <id> [--thread-id <id>]`);
+  codex-session-context.mjs --thread-id <id> [--session-id <id>]`);
   process.exit(2);
 }
 
@@ -25,13 +25,14 @@ function parseArgs(argv) {
 }
 
 const args = parseArgs(process.argv.slice(2));
-const sessionId = args["session-id"] || "";
-if (!sessionId.trim()) usage("--session-id is required for FULL_CODEX_FIRST");
+const threadId = args["thread-id"] || "";
+if (!threadId.trim()) usage("--thread-id is required for FULL_CODEX_FIRST");
+const sessionId = args["session-id"] || null;
 
 console.log(JSON.stringify({
   ok: true,
   origin_codex_session_id: sessionId,
-  origin_codex_thread_id: args["thread-id"] || sessionId,
+  origin_codex_thread_id: threadId,
   workflow_type: "FULL_CODEX_FIRST",
   codex_resume_required: true,
 }, null, 2));

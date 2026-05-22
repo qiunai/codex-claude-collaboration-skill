@@ -4,7 +4,6 @@ Collaboration ID: {{COLLABORATION_ID}}
 Codex packet path: {{PACKET_PATH}}
 Claude session: {{CLAUDE_SESSION_ID}}
 Workflow type: {{WORKFLOW_TYPE}}
-Origin Codex session: {{ORIGIN_CODEX_SESSION_ID}}
 Origin Codex thread: {{ORIGIN_CODEX_THREAD_ID}}
 Codex continuity required: {{CODEX_RESUME_REQUIRED}}
 Skill workflow version: V7
@@ -26,7 +25,7 @@ Desktop reasoning level: EXTRA_HIGH
 6. 不要在 Explore 阶段实现代码。
 7. 如果 `Workflow type` 是 `FULL_CODEX_FIRST`,后续把 proposal 交给 Codex 执行时必须使用 `Origin Codex thread` 精确恢复: `codex-companion task --resume-thread <Origin Codex thread>`。
 8. `FULL_CODEX_FIRST` 的原始 Codex worktree 可能只是 main 基线,不包含 Claude proposal。执行实现前必须从已推送的 proposal 分支创建/使用 Codex implementation worktree。
-9. 只有 `Workflow type` 是 `CLAUDE_FIRST` 且没有 Origin Codex session 时,才允许首次创建新的 Codex 任务线程。
+9. 只有 `Workflow type` 是 `CLAUDE_FIRST` 且没有 Origin Codex thread 时,才允许首次创建新的 Codex 任务线程。
 10. proposal 和后续实现必须围绕 `Product iteration version` 组织;如果创建变更,需同步更新版本文件和 Changelog。
 11. Claude Desktop 当前会话应保持 Bypass Permission、最新可见 Opus 模型、Extra High reasoning。
 
