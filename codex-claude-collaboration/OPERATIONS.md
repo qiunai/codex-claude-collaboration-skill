@@ -25,6 +25,40 @@ Workflow type ownership:
   resumable task thread in the current context and can select the wrong thread
   when multiple Claude sessions run concurrently.
 
+## 0. Installation Prerequisites
+
+Install collaboration dependencies in this order:
+
+1. Claude Code Codex plugin.
+2. OpenSpec.
+3. `codex-claude-collaboration` skill.
+
+In Claude Code:
+
+```text
+/plugin marketplace add openai/codex-plugin-cc
+/plugin install codex@openai-codex
+/reload-plugins
+/codex:setup
+```
+
+If the installed plugin does not yet include exact thread routing, apply this
+skill repository's runtime patch:
+
+```bash
+node "$SKILL_DIR/scripts/install-codex-plugin-cc-resume-thread.mjs"
+```
+
+Verify before starting any Claude -> Codex implementation dispatch:
+
+```bash
+CODEX_COMPANION="${CODEX_COMPANION:-$HOME/.claude/plugins/marketplaces/openai-codex/plugins/codex/scripts/codex-companion.mjs}"
+node "$SKILL_DIR/scripts/verify-codex-companion.mjs" --command "$CODEX_COMPANION"
+```
+
+The verification must report `"supports_resume_thread": true`. If it does not,
+do not use `--resume-last` as a fallback for automated collaboration.
+
 ## 1. Codex Explore -> Claude Review Packet
 
 ### 1.1 Codex Research Packet

@@ -32,50 +32,61 @@ implement while Claude reviews the result.
 - Separates skill workflow version from product iteration version, so a V7 skill
   can manage product iterations such as `V1.12`, `V1.13`, and `V1.14`.
 
-## Install
+## Install Order
 
-Clone the repository, then copy the skill folder into either or both skill
-locations:
+Install in this order:
 
-```bash
-git clone https://github.com/<owner>/codex-claude-collaboration-skill.git
-cd codex-claude-collaboration-skill
+1. Install the Codex plugin for Claude Code, then apply/verify this repository's
+   exact-thread patch.
+2. Install OpenSpec.
+3. Install `codex-claude-collaboration` for Codex and Claude.
 
-# Install for Codex
-mkdir -p ~/.codex/skills
-cp -R codex-claude-collaboration ~/.codex/skills/
+The order matters because Claude needs the Codex plugin before it can dispatch
+implementation work to Codex, and this skill requires the plugin command
+`codex-companion task --resume-thread <thread-id>` for safe concurrent routing.
 
-# Install for Claude
-mkdir -p ~/.claude/skills
-cp -R codex-claude-collaboration ~/.claude/skills/
+## 1. Install The Codex Plugin
+
+In Claude Code, install the OpenAI Codex plugin:
+
+```text
+/plugin marketplace add openai/codex-plugin-cc
+/plugin install codex@openai-codex
+/reload-plugins
+/codex:setup
 ```
 
-Restart Codex or Claude if the skill list is already loaded in the current
-session.
+Until the upstream thread-resume PR is included in the published plugin, apply
+the bundled runtime patch from this repository:
 
-## Requirements
+```bash
+git clone https://github.com/qiunai/codex-claude-collaboration-skill.git
+cd codex-claude-collaboration-skill
 
-- Codex with local skill support.
-- Claude Desktop when using Desktop delivery.
-- Node.js for bundled validation scripts.
-- Git and `jq`.
-- `codex-companion` available on `PATH` for Claude-to-Codex implementation
-  dispatch, or set `CODEX_COMPANION` to the executable path. The broker must
-  advertise `task --resume-thread <thread-id>`.
-- Exact broker continuity uses `codex-companion task --resume-thread <thread-id>`.
-  Do not use `--resume-last` for automated collaboration routing when multiple
-  Claude/Codex tasks may be active.
-- Verify the actual executable before dispatch:
-  `node ~/.claude/skills/codex-claude-collaboration/scripts/verify-codex-companion.mjs --command "$CODEX_COMPANION"`.
-  If `CODEX_COMPANION` points at a `.mjs` plugin script, the workflow invokes it
-  through `node`.
-- Optional but recommended: OpenSpec commands available in the target project.
+node codex-claude-collaboration/scripts/install-codex-plugin-cc-resume-thread.mjs
+```
 
-No personal paths, local project names, tokens, or state files are required by
-the repository. Runtime state is written locally under the installed skill's
-`state/` directory and should not be committed.
+Then verify the broker that Claude will call:
 
-## OpenSpec
+```bash
+CODEX_COMPANION="${CODEX_COMPANION:-$HOME/.claude/plugins/marketplaces/openai-codex/plugins/codex/scripts/codex-companion.mjs}"
+node codex-claude-collaboration/scripts/verify-codex-companion.mjs \
+  --command "$CODEX_COMPANION"
+```
+
+Expected result: JSON with `"supports_resume_thread": true`.
+
+The plugin patch is stored at:
+
+```text
+codex-claude-collaboration/plugins/codex-plugin-cc/
+```
+
+Upstream PR:
+
+<https://github.com/openai/codex-plugin-cc/pull/344>
+
+## 2. Install OpenSpec
 
 This collaboration workflow assumes project changes are managed with OpenSpec.
 Most deeper collaboration loops use OpenSpec artifacts as the shared contract
@@ -106,6 +117,77 @@ nix profile install github:Fission-AI/OpenSpec
 
 After installation, initialize or use OpenSpec inside your project according to
 the OpenSpec documentation and your coding agent's integration.
+
+## 3. Install The Collaboration Skill
+
+Clone the repository, then copy the skill folder into either or both skill
+locations:
+
+```bash
+git clone https://github.com/qiunai/codex-claude-collaboration-skill.git
+cd codex-claude-collaboration-skill
+
+# Install for Codex
+mkdir -p ~/.codex/skills
+cp -R codex-claude-collaboration ~/.codex/skills/
+
+# Install for Claude
+mkdir -p ~/.claude/skills
+cp -R codex-claude-collaboration ~/.claude/skills/
+```
+
+Restart Codex or Claude if the skill list is already loaded in the current
+session.
+
+## One-Paste Bootstrap
+
+This installs the repository, patches/verifies the Codex plugin if it is already
+installed, installs OpenSpec with npm, and copies the skill into both agent
+skill directories:
+
+```bash
+git clone https://github.com/qiunai/codex-claude-collaboration-skill.git
+cd codex-claude-collaboration-skill
+
+node codex-claude-collaboration/scripts/install-codex-plugin-cc-resume-thread.mjs
+npm install -g @fission-ai/openspec@latest
+
+mkdir -p ~/.codex/skills ~/.claude/skills
+rm -rf ~/.codex/skills/codex-claude-collaboration
+rm -rf ~/.claude/skills/codex-claude-collaboration
+cp -R codex-claude-collaboration ~/.codex/skills/
+cp -R codex-claude-collaboration ~/.claude/skills/
+
+CODEX_COMPANION="${CODEX_COMPANION:-$HOME/.claude/plugins/marketplaces/openai-codex/plugins/codex/scripts/codex-companion.mjs}"
+node codex-claude-collaboration/scripts/verify-codex-companion.mjs \
+  --command "$CODEX_COMPANION"
+```
+
+If the plugin patch step says no installed plugin root was found, first run the
+Claude Code plugin commands from step 1, then rerun the patch command.
+
+## Requirements
+
+- Codex with local skill support.
+- Claude Desktop when using Desktop delivery.
+- Node.js for bundled validation scripts.
+- Git and `jq`.
+- OpenSpec for proposal/spec-driven collaboration.
+- `codex-companion` available on `PATH` for Claude-to-Codex implementation
+  dispatch, or set `CODEX_COMPANION` to the executable path. Install the Codex
+  plugin first and ensure the broker advertises
+  `task --resume-thread <thread-id>`.
+- Exact broker continuity uses `codex-companion task --resume-thread <thread-id>`.
+  Do not use `--resume-last` for automated collaboration routing when multiple
+  Claude/Codex tasks may be active.
+- Verify the actual executable before dispatch:
+  `node ~/.claude/skills/codex-claude-collaboration/scripts/verify-codex-companion.mjs --command "$CODEX_COMPANION"`.
+  If `CODEX_COMPANION` points at a `.mjs` plugin script, the workflow invokes it
+  through `node`.
+
+No personal paths, local project names, tokens, or state files are required by
+the repository. Runtime state is written locally under the installed skill's
+`state/` directory and should not be committed.
 
 ## Full Workflow
 

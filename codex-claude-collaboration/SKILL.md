@@ -32,6 +32,31 @@ The core V7 rule: **transfer reviewable material, not false certainty.** Codex
 must label evidence, interpretations, and unknowns so Claude can audit and
 improve the result instead of inheriting an overconfident conclusion.
 
+## Required Installation Order
+
+Before using this workflow in Claude or Codex:
+
+1. Install the Claude Code Codex plugin and verify it supports exact thread
+   routing:
+   `codex-companion task --resume-thread <thread-id>`.
+2. Install OpenSpec in the target development environment.
+3. Install this skill in both Codex and Claude when both agents participate in
+   the loop.
+
+If the installed Codex plugin does not advertise `--resume-thread <thread-id>`,
+apply the bundled patch:
+
+```bash
+node codex-claude-collaboration/scripts/install-codex-plugin-cc-resume-thread.mjs
+```
+
+Then verify:
+
+```bash
+node codex-claude-collaboration/scripts/verify-codex-companion.mjs \
+  --command "$CODEX_COMPANION"
+```
+
 ## Modes
 
 | Trigger | Mode | Direction |
@@ -71,7 +96,10 @@ Broker resume rule:
 - Before relying on exact routing, verify the installed broker advertises
   `task --resume-thread <thread-id>` with
   `scripts/verify-codex-companion.mjs --command "$CODEX_COMPANION"`.
-- Current installed `codex-companion` supports exact thread resume:
+- This repository includes the codex-plugin-cc runtime patch under
+  `plugins/codex-plugin-cc/` for environments where the published plugin does
+  not yet include upstream PR 344.
+- A valid `codex-companion` supports exact thread resume:
   `codex-companion task --resume-thread <thread-id>`.
 - `--resume-thread` is wired to Codex app-server `thread/resume`, so it targets
   the supplied thread id instead of searching for the latest thread.
