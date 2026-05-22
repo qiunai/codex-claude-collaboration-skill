@@ -1,6 +1,6 @@
-# OPERATIONS.md — Codex-Claude Collaboration V7
+# OPERATIONS.md — Codex-Claude Collaboration V8
 
-V7 has two primary transfer directions:
+V8 has two primary transfer directions:
 
 - `SEND_TO_CLAUDE`: Codex research -> Claude OpenSpec Explore.
 - `CODEX_IMPLEMENT`: Claude OpenSpec proposal -> Codex implementation/PR.
@@ -58,6 +58,28 @@ node "$SKILL_DIR/scripts/verify-codex-companion.mjs" --command "$CODEX_COMPANION
 
 The verification must report `"supports_resume_thread": true`. If it does not,
 do not use `--resume-last` as a fallback for automated collaboration.
+
+### 0.1 Runtime State Root
+
+Runtime state is not part of the installed skill code. Use a durable state root:
+
+```bash
+SKILL_DIR="${SKILL_DIR:-$HOME/.claude/skills/codex-claude-collaboration}"
+STATE_ROOT="${CODEX_CLAUDE_COLLABORATION_STATE_DIR:-$HOME/.claude/codex-claude-collaboration/state}"
+mkdir -p "$STATE_ROOT"
+LOCK_DIR="$STATE_ROOT/desktop-delivery.lock"
+```
+
+Do not use `$SKILL_DIR/state` for active collaboration state. Reinstalling or
+syncing a skill directory can delete it while Codex is still running, which
+causes phase guard to fail before Desktop delivery.
+
+When upgrading from pre-V8 installs, migrate any legacy state before replacing
+skill directories:
+
+```bash
+node "$SKILL_DIR/scripts/migrate-runtime-state.mjs" --state-root "$STATE_ROOT"
+```
 
 ## 1. Codex Explore -> Claude Review Packet
 
@@ -180,11 +202,14 @@ Render `templates/claude-review-packet.md` with:
 - `STATE_PATH`
 - `SKILL_DIR`
 - `DESKTOP_DELIVERY_LOCK_DIR`
+- `STATE_ROOT`
 
 Create/update state for this phase before sending:
 
 ```bash
-STATE_FILE="$SKILL_DIR/state/$COLLABORATION_ID.json"
+STATE_ROOT="${CODEX_CLAUDE_COLLABORATION_STATE_DIR:-$HOME/.claude/codex-claude-collaboration/state}"
+mkdir -p "$STATE_ROOT"
+STATE_FILE="$STATE_ROOT/$COLLABORATION_ID.json"
 
 node "$SKILL_DIR/scripts/state.mjs" init \
   --file "$STATE_FILE" \
@@ -342,7 +367,9 @@ MAIN_REPO="$(git -C "$CLAUDE_WORKTREE" rev-parse --show-toplevel)"
 PROJECT_NAME="${PROJECT_NAME:-$(basename "$MAIN_REPO")}"
 CODEX_WORKTREE="$HOME/.codex/worktrees/${CHANGE}-${SHORT}/$PROJECT_NAME"
 SKILL_DIR="$HOME/.claude/skills/codex-claude-collaboration"
-LOCK_DIR="$SKILL_DIR/state/desktop-delivery.lock"
+STATE_ROOT="${CODEX_CLAUDE_COLLABORATION_STATE_DIR:-$HOME/.claude/codex-claude-collaboration/state}"
+mkdir -p "$STATE_ROOT"
+LOCK_DIR="$STATE_ROOT/desktop-delivery.lock"
 
 git -C "$MAIN_REPO" worktree add "$CODEX_WORKTREE" -b "$LOCAL_BRANCH" "origin/feat/$CHANGE"
 mkdir -p "$CODEX_WORKTREE/.codex-claude-collaboration/history"
@@ -350,7 +377,7 @@ mkdir -p "$CODEX_WORKTREE/.codex-claude-collaboration/history"
 SESSION_JSON=$(node "$SKILL_DIR/scripts/resolve-claude-session.mjs" --session-id "$CLAUDE_CODE_SESSION_ID")
 CLAUDE_SESSION_JSONL_PATH=$(echo "$SESSION_JSON" | jq -r '.jsonl_path')
 CLAUDE_SESSION_TITLE=$(echo "$SESSION_JSON" | jq -r '.custom_title')
-STATE_FILE="$SKILL_DIR/state/$COLLABORATION_ID.json"
+STATE_FILE="$STATE_ROOT/$COLLABORATION_ID.json"
 
 WORKFLOW_TYPE="${WORKFLOW_TYPE:-CLAUDE_FIRST}"
 STATE_ARGS=(
@@ -388,7 +415,8 @@ so it must not be treated as containing the current proposal.
 
 ### 3.3 Start Codex
 
-Render `templates/codex-execution.md`, then start Codex from the proposal
+Render `templates/codex-execution.md`, including `STATE_PATH="$STATE_FILE"` and
+`DESKTOP_DELIVERY_LOCK_DIR="$LOCK_DIR"`, then start Codex from the proposal
 branch implementation worktree. If this collaboration began in Codex, resume
 the exact stored Codex thread. This avoids `--resume-last` selecting another
 Claude session's most recent task.
@@ -426,6 +454,18 @@ node "$SKILL_DIR/scripts/state.mjs" update \
 ```
 
 End the Claude turn and wait for Desktop delivery.
+
+State continuity invariant:
+
+- Claude must create `STATE_FILE` before starting Codex.
+- The rendered Codex prompt must include `STATE_PATH`, `SKILL_DIR`,
+  `CLAUDE_WORKTREE`, `CODEX_WORKTREE`, `CLAUDE_SESSION_ID`,
+  `CLAUDE_SESSION_JSONL_PATH`, `WORKFLOW_TYPE`, `ORIGIN_CODEX_THREAD_ID`, and
+  version metadata.
+- Codex must run phase guard before Desktop delivery.
+- If `STATE_FILE` is missing, Codex may recreate it only from the explicit
+  metadata in the prompt, then rerun phase guard. This recovery is for deleted
+  runtime state, not for guessing a different collaboration.
 
 ## 4. Codex Implementation -> Claude Review
 
@@ -466,13 +506,74 @@ openspec validate "$CHANGE" --strict
 
 Then inspect PR diff, evidence, tests, and `review-checklist.md`.
 
-If clean: archive, merge, mark state `COMPLETED`.
+### 5.1 Finding Classification
 
-If issues and round < 3: render `templates/codex-rework.md` and send to the
-stored `codex_thread_id` with
+Classify findings before deciding whether to stop or continue:
+
+- `Blocking/Harmful`: correctness failure, data loss, security/privacy issue,
+  destructive UX, core workflow broken, fake or missing required evidence, or
+  failed required gate.
+- `High`: likely user-visible regression, OpenSpec requirement mismatch, or
+  broad implementation risk.
+- `Minor`: small UI/copy issue, naming, docs polish, non-blocking cleanup,
+  merge conflict, branch sync, archive mechanics, PR comment wording, or other
+  low-risk hygiene.
+
+Only structural `Blocking/Harmful` and `High` rework rounds count toward the
+three-round cap.
+
+### 5.2 Rework Loop
+
+If Blocking/Harmful or High issues exist and the structural round is less than
+3, render `templates/codex-rework.md` and send the focused findings to the
+stored `codex_thread_id`:
+
 `codex-companion task --resume-thread "$CODEX_THREAD_ID" --write --json`.
 
-If round >= 3 and Blocking/High remains: stop and report.
+Codex fixes only the listed findings, pushes to `feat/$CHANGE`, writes a new
+implementation result, and reports through Claude Desktop.
+
+If the third structural review still has Blocking/Harmful or High findings,
+Claude stops and asks the user whether to change direction.
+
+Minor issues and merge conflicts do not stop the workflow at round 3. Continue
+delegating those to Codex until the PR is clean enough to merge.
+
+### 5.3 Accept, Archive, Comment, Merge
+
+If verification is clean and there are no Blocking/Harmful or High findings,
+Claude should proceed without asking the user for another approval.
+
+Required completion order:
+
+1. Archive the OpenSpec change:
+   ```bash
+   git checkout main
+   git pull --ff-only
+   openspec archive "$CHANGE" --yes
+   openspec validate --strict
+   git add openspec/
+   git commit -m "chore(openspec): archive $CHANGE"
+   git push origin main
+   ```
+   If the repository archives on the feature branch instead of directly on
+   main, follow the repository's established convention, but archive before
+   merge completion.
+2. Reply on the PR with:
+   - review verdict,
+   - validation commands,
+   - archive commit,
+   - remaining nit-level notes if any.
+3. Merge the PR using the repository's normal merge method:
+   `gh pr merge <number> --squash` or the method already used by the project.
+4. Record the merge commit and mark state complete:
+   ```bash
+   node "$SKILL_DIR/scripts/state.mjs" update \
+     --file "$STATE_FILE" \
+     --status COMPLETED \
+     --merge-commit "$MERGE_COMMIT" \
+     --pr-url "$PR_URL"
+   ```
 
 ## 6. Desktop Targeting
 
@@ -503,7 +604,7 @@ Duplicate title + no unique marker = do not send.
 
 All Computer Use sends share:
 
-`~/.claude/skills/codex-claude-collaboration/state/desktop-delivery.lock`
+`~/.claude/codex-claude-collaboration/state/desktop-delivery.lock`
 
 Use:
 

@@ -3,6 +3,9 @@
 > Apply every applicable item against the PR diff + the change's
 > proposal/design/tasks/specs. Grade each finding
 > `Blocking | High | Medium | Low`. Be specific: file:line + concrete fix.
+> V8 routing treats `Blocking` and `High` as structural findings. `Medium` and
+> `Low` are minor unless the reviewer explicitly explains why they create
+> harmful user impact.
 
 ---
 
@@ -115,6 +118,11 @@ The emitted prompts mandate retained evidence (and, on rework, an
       yourself).
 - [ ] Never merge on the PR's self-reported green alone — the cheap gates
       (`openspec validate`, typecheck) are re-run by the reviewer first.
+- [ ] If the verdict is clean, do not stop for user approval. Run the accepted
+      completion route: archive, comment on the PR, merge, mark state complete.
+- [ ] If round 3 still has Blocking/High, stop for user direction. If only
+      Medium/Low, merge conflicts, archive mechanics, PR comment wording, or
+      branch sync remain, continue delegating those to Codex until clean.
 
 ---
 
@@ -142,7 +150,12 @@ PASS / FAIL  (+ errors)
 
 ## 6. Next action
 - If ✅ → run R6: archive → commit → PR acceptance comment → merge to main.
-- If 🟡/⛔ → run R5: emit the substituted /GOAL rework prompt (findings).
+- If 🟡/⛔ with Blocking/High and structural round < 3 → run R5: emit the
+  substituted /GOAL rework prompt (findings).
+- If 🟡/⛔ with Blocking/High at structural round 3 → stop and ask the user
+  whether to change direction.
+- If only Medium/Low cleanup or merge conflicts remain → keep sending focused
+  Codex rework; these do not consume the structural round cap.
 ```
 
 Grading guide:

@@ -1,10 +1,21 @@
-# state/ — Codex-Claude Collaboration V7
+# state/ — Codex-Claude Collaboration V8
+
+This directory in the repository is documentation only. Active runtime state
+must be stored outside the installed skill tree:
+
+`~/.claude/codex-claude-collaboration/state/`
+
+Override with `CODEX_CLAUDE_COLLABORATION_STATE_DIR` when needed.
+
+Do not store active state under `~/.claude/skills/.../state/` or
+`~/.codex/skills/.../state/`; reinstalling or syncing the skill can delete
+those directories.
 
 Each active collaboration writes one `<collaboration_id>.json`.
 
 Important fields:
 
-- `schema_version` — `7.0`
+- `schema_version` — `8.0`
 - `collaboration_id` — stable id for the whole Codex/Claude loop
 - `execution_id` — stable id for the Codex implementation run
 - `mode` — `CODEX_EXPLORE` / `SEND_TO_CLAUDE` / `CLAUDE_EXPLORE` / `CODEX_IMPLEMENT`

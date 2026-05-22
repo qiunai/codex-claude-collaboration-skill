@@ -1,4 +1,4 @@
-# Codex Execution Prompt Template (V7)
+# Codex Execution Prompt Template (V8)
 
 Claude renders this template and starts Codex through the broker from the
 implementation worktree `{{CODEX_WORKTREE}}` on branch `{{LOCAL_BRANCH}}`. This
@@ -21,6 +21,12 @@ Claude's proposal artifacts.
 - Claude session JSONL: {{CLAUDE_SESSION_JSONL_PATH}}
 - Claude session title: {{CLAUDE_SESSION_TITLE}}
 - Desktop delivery lock: {{DESKTOP_DELIVERY_LOCK_DIR}}
+- workflow type: {{WORKFLOW_TYPE}}
+- origin Codex thread: {{ORIGIN_CODEX_THREAD_ID}}
+- product iteration version: {{ITERATION_VERSION}}
+- previous product version: {{PREVIOUS_VERSION}}
+- version file: {{VERSION_FILE}}
+- changelog path: {{CHANGELOG_PATH}}
 
 工作流来源:
 - `FULL_CODEX_FIRST`:用户先在 Codex 探索,Claude 后续生成 proposal。此时原始
@@ -92,7 +98,7 @@ Claude's proposal artifacts.
 
 ```json
 {
-  "schema_version": "7.0",
+  "schema_version": "8.0",
   "collaboration_id": "{{COLLABORATION_ID}}",
   "execution_id": "{{EXECUTION_ID}}",
   "change": "{{CHANGE}}",
@@ -129,7 +135,34 @@ Summary: <一句话中文总结>
 
 步骤:
 
-1. 先运行 phase guard,确认当前是 implementation result 回传阶段,不是初步探索包发送阶段:
+1. 确认 `{{STATE_PATH}}` 存在且是合法 JSON。这个 state 必须由 Claude 在启动 Codex 前生成,正常情况下不应缺失。
+   如果缺失,只允许用本 prompt 中的明确字段恢复同一路径的 state,然后继续 guard;不要发明 collaboration id/session/worktree:
+   ```bash
+   if [ ! -s "{{STATE_PATH}}" ]; then
+     node "{{SKILL_DIR}}/scripts/state.mjs" init \
+       --file "{{STATE_PATH}}" \
+       --collaboration-id "{{COLLABORATION_ID}}" \
+       --execution-id "{{EXECUTION_ID}}" \
+       --change "{{CHANGE}}" \
+       --round 1 \
+       --mode CODEX_IMPLEMENT \
+       --claude-session-id "{{CLAUDE_SESSION_ID}}" \
+       --claude-session-jsonl-path "{{CLAUDE_SESSION_JSONL_PATH}}" \
+       --claude-session-title "{{CLAUDE_SESSION_TITLE}}" \
+       --claude-worktree "{{CLAUDE_WORKTREE}}" \
+       --codex-worktree "{{CODEX_WORKTREE}}" \
+       --local-branch "{{LOCAL_BRANCH}}" \
+       --remote-branch "feat/{{CHANGE}}" \
+       --workflow-type "{{WORKFLOW_TYPE}}" \
+       --origin-codex-thread-id "{{ORIGIN_CODEX_THREAD_ID}}" \
+       --iteration-version "{{ITERATION_VERSION}}" \
+       --previous-version "{{PREVIOUS_VERSION}}" \
+       --version-file "{{VERSION_FILE}}" \
+       --changelog-path "{{CHANGELOG_PATH}}"
+   fi
+   ```
+   如果恢复失败,写 `implementation-result.json` 为 `BLOCKED`,原因写明 state 缺失且无法恢复,不要打开 Claude Desktop。
+2. 先运行 phase guard,确认当前是 implementation result 回传阶段,不是初步探索包发送阶段:
    ```bash
    node "{{SKILL_DIR}}/scripts/phase-guard.mjs" \
      --state "{{STATE_PATH}}" \
@@ -137,8 +170,8 @@ Summary: <一句话中文总结>
      --result-path "{{CODEX_WORKTREE}}/.codex-claude-collaboration/implementation-result.json"
    ```
    guard 不通过时绝对不要打开或输入 Claude Desktop。
-2. 重新读取 `{{STATE_PATH}}` 和 `{{CLAUDE_SESSION_JSONL_PATH}}`,确认 JSONL 第一行的 `sessionId` 是 `{{CLAUDE_SESSION_ID}}`。如果 `customTitle` 与模板标题不同,以 JSONL 当前 `customTitle` 为准。
-3. 获取 Desktop delivery lock:
+3. 重新读取 `{{STATE_PATH}}` 和 `{{CLAUDE_SESSION_JSONL_PATH}}`,确认 JSONL 第一行的 `sessionId` 是 `{{CLAUDE_SESSION_ID}}`。如果 `customTitle` 与模板标题不同,以 JSONL 当前 `customTitle` 为准。
+4. 获取 Desktop delivery lock:
    ```bash
    node "{{SKILL_DIR}}/scripts/desktop-delivery-lock.mjs" acquire \
      --lock-dir "{{DESKTOP_DELIVERY_LOCK_DIR}}" \
@@ -148,12 +181,12 @@ Summary: <一句话中文总结>
      --stale-seconds 900
    ```
    保存返回的 `token`。这是 FIFO 队列锁:如果前面已有发送者正在操作 Claude Desktop,脚本会等待并每 1 秒复查;前一个释放后按队列顺序获得锁。10 分钟仍拿不到锁时,不要碰 Claude Desktop,写 result status `BLOCKED` 并说明 lock timeout。
-4. 使用 Computer Use 打开 Claude Desktop。
-5. 在左侧会话列表中根据 Claude session title 定位并点击目标会话。优先点击 accessibility tree 中精确匹配标题的按钮;不要优先用裸坐标。
-6. 在主内容区域验证至少一个强标识存在: `{{COLLABORATION_ID}}` / `{{EXECUTION_ID}}` / `{{CHANGE}}` / PR URL / PR number。只靠标题不够。
-7. 确认底部 Prompt 输入框属于该主内容区域。
-8. 输入上方消息并点击 Send。
-9. 更新 state:
+5. 使用 Computer Use 打开 Claude Desktop。
+6. 在左侧会话列表中根据 Claude session title 定位并点击目标会话。优先点击 accessibility tree 中精确匹配标题的按钮;不要优先用裸坐标。
+7. 在主内容区域验证至少一个强标识存在: `{{COLLABORATION_ID}}` / `{{EXECUTION_ID}}` / `{{CHANGE}}` / PR URL / PR number。只靠标题不够。
+8. 确认底部 Prompt 输入框属于该主内容区域。
+9. 输入上方消息并点击 Send。
+10. 更新 state:
    ```bash
    node "{{SKILL_DIR}}/scripts/state.mjs" update \
      --file "{{STATE_PATH}}" \
@@ -162,7 +195,7 @@ Summary: <一句话中文总结>
      --pr-url "<PR_URL_OR_NONE>" \
      --desktop-delivery-note "Claude Desktop title verified; strong marker verified; message sent"
    ```
-10. 释放锁:
+11. 释放锁:
    ```bash
    node "{{SKILL_DIR}}/scripts/desktop-delivery-lock.mjs" release \
      --lock-dir "{{DESKTOP_DELIVERY_LOCK_DIR}}" \

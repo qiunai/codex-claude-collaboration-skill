@@ -9,7 +9,7 @@ import process from "node:process";
 function usage(message) {
   if (message) console.error(`ERROR: ${message}`);
   console.error(`Usage:
-  project-context.mjs --cwd <path> --version <V7|V1.0> --summary <short text> [--group <name>] [--expected-project <name>]`);
+  project-context.mjs --cwd <path> --version <V8|V1.0> --summary <short text> [--group <name>] [--expected-project <name>]`);
   process.exit(2);
 }
 
@@ -47,7 +47,7 @@ const args = parseArgs(process.argv.slice(2));
 const cwd = args.cwd ? resolve(args.cwd) : null;
 if (!cwd || !existsSync(cwd)) usage("--cwd must point to an existing path");
 const version = args.version;
-if (!version || !/^V[0-9]+(?:\.[0-9]+)*$/.test(version)) usage("--version must look like V7 or V1.0");
+if (!version || !/^V[0-9]+(?:\.[0-9]+)*$/.test(version)) usage("--version must look like V8 or V1.0");
 const summary = args.summary;
 if (!summary || !summary.trim()) usage("--summary is required");
 

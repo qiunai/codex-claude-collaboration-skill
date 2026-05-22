@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// codex-claude-collaboration v7 state helper.
+// codex-claude-collaboration v8 state helper.
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -137,7 +137,7 @@ function validatePhaseState(state) {
       usage("SENT_TO_CLAUDE requires base_branch=main");
     }
     if (!state.desktop_session_title || !/^V[0-9]+(?:\.[0-9]+)*\s+\S/.test(state.desktop_session_title)) {
-      usage("SENT_TO_CLAUDE requires desktop_session_title like 'V7 short summary' or 'V1.0 short summary'");
+      usage("SENT_TO_CLAUDE requires desktop_session_title like 'V8 short summary' or 'V1.0 short summary'");
     }
     if (!state.desktop_group_name) {
       usage("SENT_TO_CLAUDE requires desktop_group_name");
@@ -185,7 +185,7 @@ if (command === "init") {
   if (!Number.isInteger(round) || round < 1) usage("--round must be a positive integer");
   const now = nowIso();
   const state = {
-    schema_version: "7.0",
+    schema_version: "8.0",
     collaboration_id: requireArg(args, "collaboration-id"),
     execution_id: requireArg(args, "execution-id"),
     mode: args.mode || "CODEX_IMPLEMENT",

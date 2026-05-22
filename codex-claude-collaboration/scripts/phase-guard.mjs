@@ -78,7 +78,7 @@ if (phase === "explore-packet") {
     fail("WRONG_BASE_BRANCH", "explore packet delivery must start Claude Desktop from main branch", { base_branch: state.base_branch });
   }
   if (!state.desktop_session_title || !/^V[0-9]+(?:\.[0-9]+)*\s+\S/.test(state.desktop_session_title)) {
-    fail("BAD_SESSION_TITLE", "desktop_session_title must look like 'V7 short summary' or 'V1.0 short summary'");
+    fail("BAD_SESSION_TITLE", "desktop_session_title must look like 'V8 short summary' or 'V1.0 short summary'");
   }
   if (!state.desktop_group_name) {
     fail("MISSING_GROUP", "desktop_group_name is required for post-send Move to group");

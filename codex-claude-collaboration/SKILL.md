@@ -9,7 +9,7 @@ description: >-
   FIFO Desktop locking, or evidence-first cross-model review.
 ---
 
-# Codex-Claude Collaboration (V7)
+# Codex-Claude Collaboration (V8)
 
 This skill defines the full Codex-Claude Cooperation workflow. It is no longer a
 one-way delivery helper: implementation execution is only one stage inside the
@@ -28,7 +28,7 @@ Codex investigates with tools/plugins
   -> Claude reviews, requests rework, archives, and merges
 ```
 
-The core V7 rule: **transfer reviewable material, not false certainty.** Codex
+The core V8 rule: **transfer reviewable material, not false certainty.** Codex
 must label evidence, interpretations, and unknowns so Claude can audit and
 improve the result instead of inheriting an overconfident conclusion.
 
@@ -115,7 +115,7 @@ Broker resume rule:
 ## Product Iteration Versioning
 
 Session names and proposal scopes use the product iteration version, not the
-skill version. The skill may be V7 while the product iteration is `V1.13`.
+skill version. The skill may be V8 while the product iteration is `V1.13`.
 
 - Resolve `CURRENT_VERSION` from the project and compute `ITERATION_VERSION`
   before creating a Claude Desktop session.
@@ -148,6 +148,24 @@ For `SEND_TO_CLAUDE`, use Computer Use to inspect and repair Claude Desktop
 first. If project, branch, worktree, permission, model, or reasoning are wrong,
 change them to the expected values. Run the guard after those repairs and before
 typing the prompt. If the UI cannot be repaired, do not send.
+
+## Runtime State
+
+Runtime collaboration state must live outside the installed skill directory:
+
+`~/.claude/codex-claude-collaboration/state/`
+
+Use `CODEX_CLAUDE_COLLABORATION_STATE_DIR` to override it. Do not store active
+state under `~/.claude/skills/codex-claude-collaboration/state/` or
+`~/.codex/skills/codex-claude-collaboration/state/`; skill reinstall or sync
+commands often delete those directories.
+
+Claude creates the state file before dispatching Codex. Codex receives
+`STATE_PATH` in the execution prompt. If Codex finds the file missing before
+Desktop delivery, it may recreate only that exact file from explicit prompt
+metadata, then run `phase-guard.mjs`. If recovery cannot be performed exactly,
+Codex must write a `BLOCKED` implementation result and stop instead of sending
+an unguarded Desktop message.
 
 ## Evidence Discipline
 
@@ -213,6 +231,37 @@ When Claude has an OpenSpec proposal ready for Codex:
    reports through Claude Desktop Computer Use.
 9. Claude reviews, merges, or sends rework to the exact stored Codex thread.
 
+## Claude Review, Rework, And Merge
+
+Claude should be proactive after Codex returns `READY_FOR_REVIEW`:
+
+1. Validate the implementation against OpenSpec and the PR diff.
+2. Classify findings:
+   - `Blocking/Harmful`: correctness, data loss, security, destructive UX,
+     broken core workflow, fake evidence, or failed required gates.
+   - `High`: likely user-visible regression or spec mismatch.
+   - `Minor`: polish, naming, small copy issue, non-blocking cleanup, flaky
+     documentation detail, or merge conflict/branch hygiene.
+3. If Blocking/Harmful or High findings exist, send a focused rework packet to
+   Codex with `codex-companion task --resume-thread <codex_thread_id>`. Codex
+   fixes only the listed findings, pushes, and reports back through Desktop.
+4. Count only structural Blocking/Harmful/High review cycles against the
+   3-round cap. If round 3 still has Blocking/Harmful or High findings, Claude
+   stops and asks the user whether to change direction.
+5. Minor issues, merge conflicts, branch synchronization, archive mechanics, PR
+   comments, and similarly low-risk cleanup do not consume the 3-round cap.
+   Claude should continue delegating those to Codex until clean.
+6. If all required gates pass and findings are only acceptable nit-level notes,
+   Claude should not stop for user approval. It should archive, comment on the
+   PR, merge to `main`, and mark state `COMPLETED`.
+
+Completion order after acceptance:
+
+1. Archive the OpenSpec change and commit/push the archive result.
+2. Reply on the PR with validation summary, archive commit, and merge intent.
+3. Merge the PR to `main` using the repository's normal merge method.
+4. Update collaboration state with merge commit and `COMPLETED`.
+
 ## Desktop Delivery
 
 All Codex -> Claude messages use Claude Desktop via Computer Use. Do not use
@@ -248,7 +297,7 @@ Targeting must verify:
 
 Desktop delivery is serialized by the FIFO lock:
 
-`~/.claude/skills/codex-claude-collaboration/state/desktop-delivery.lock`
+`~/.claude/codex-claude-collaboration/state/desktop-delivery.lock`
 
 Independent Codex work can run in parallel, but only the queue head may touch
 Claude Desktop. Waiters poll until the active sender releases, reclaim stale

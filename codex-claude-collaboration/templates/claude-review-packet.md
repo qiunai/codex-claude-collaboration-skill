@@ -6,7 +6,7 @@ Claude session: {{CLAUDE_SESSION_ID}}
 Workflow type: {{WORKFLOW_TYPE}}
 Origin Codex thread: {{ORIGIN_CODEX_THREAD_ID}}
 Codex continuity required: {{CODEX_RESUME_REQUIRED}}
-Skill workflow version: V7
+Skill workflow version: V8
 Product iteration version: {{ITERATION_VERSION}}
 Previous product version: {{PREVIOUS_VERSION}}
 Version file: {{VERSION_FILE}}

@@ -29,7 +29,7 @@ implement while Claude reviews the result.
   Bypass Permission, latest visible Opus model, and Extra High reasoning. If the
   UI is not already in that state, the workflow tells Codex to repair it before
   sending.
-- Separates skill workflow version from product iteration version, so a V7 skill
+- Separates skill workflow version from product iteration version, so a V8 skill
   can manage product iterations such as `V1.12`, `V1.13`, and `V1.14`.
 
 ## Install Order
@@ -151,6 +151,7 @@ cd codex-claude-collaboration-skill
 
 node codex-claude-collaboration/scripts/install-codex-plugin-cc-resume-thread.mjs
 npm install -g @fission-ai/openspec@latest
+node codex-claude-collaboration/scripts/migrate-runtime-state.mjs
 
 mkdir -p ~/.codex/skills ~/.claude/skills
 rm -rf ~/.codex/skills/codex-claude-collaboration
@@ -186,8 +187,9 @@ Claude Code plugin commands from step 1, then rerun the patch command.
   through `node`.
 
 No personal paths, local project names, tokens, or state files are required by
-the repository. Runtime state is written locally under the installed skill's
-`state/` directory and should not be committed.
+the repository. Runtime state is written locally outside the installed skill
+tree, by default under `~/.claude/codex-claude-collaboration/state/`, and
+should not be committed.
 
 ## Full Workflow
 
@@ -244,9 +246,11 @@ findings before implementation.
    codex-claude DONE <collaboration_id> round <n>: <STATUS> — <PR_URL_OR_NONE>
    Summary: <short summary>
    ```
-10. Claude reviews. If clean, Claude archives and merges. If not, Claude sends
-    rework to the stored Codex thread with `--resume-thread`. Structural
-    implementation rounds are capped at three.
+10. Claude reviews. If clean, Claude archives, comments on the PR, and merges
+    without waiting for another user approval. If not, Claude sends rework to
+    the stored Codex thread with `--resume-thread`. Structural
+    Blocking/Harmful/High implementation rounds are capped at three; minor
+    cleanup and merge conflicts continue until clean.
 
 When the implementation changes the product iteration, the PR should update the
 project version file and Changelog before merge. After merge, future sessions
@@ -277,6 +281,12 @@ proposal.
 - Codex implementation must run in a worktree based on the pushed proposal
   branch. Do not assume a Codex-first exploration worktree created from `main`
   contains Claude's proposal files.
+- Runtime collaboration state must be created before Codex starts and should
+  live under `~/.claude/codex-claude-collaboration/state/`, not inside the
+  installed skill directory.
+- When upgrading from an older version, run
+  `node codex-claude-collaboration/scripts/migrate-runtime-state.mjs` before
+  deleting or replacing installed skill directories.
 - If exact resume is unavailable in an older broker, stop and upgrade/patch the
   broker instead of falling back to `--resume-last` in a concurrent workflow.
 - Run `phase-guard.mjs` before any Computer Use send.

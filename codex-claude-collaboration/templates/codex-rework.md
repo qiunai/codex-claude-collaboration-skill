@@ -1,4 +1,4 @@
-# Codex Rework Prompt Template (V7 — exact thread resume)
+# Codex Rework Prompt Template (V8 — exact thread resume)
 
 Claude renders this for round 2 or 3 and sends it to the stored Codex thread:
 `codex-companion task --resume-thread <codex_thread_id> --write --json`.
@@ -13,6 +13,7 @@ Claude sessions can make "last" point at a different task.
 ═══════════════════════════════════════════════════════════════════
 
 - cwd: {{CODEX_WORKTREE}}
+- Claude worktree: {{CLAUDE_WORKTREE}}
 - branch: {{LOCAL_BRANCH}}
 - change: {{CHANGE}}
 - collaboration id: {{COLLABORATION_ID}}
@@ -22,6 +23,8 @@ Claude sessions can make "last" point at a different task.
 - Claude session JSONL: {{CLAUDE_SESSION_JSONL_PATH}}
 - Claude session title: {{CLAUDE_SESSION_TITLE}}
 - Desktop delivery lock: {{DESKTOP_DELIVERY_LOCK_DIR}}
+- workflow type: {{WORKFLOW_TYPE}}
+- origin Codex thread: {{ORIGIN_CODEX_THREAD_ID}}
 
 先确认当前 cwd 中存在 `openspec/changes/{{CHANGE}}/proposal.md`。如果不存在,
 说明 rework 没有在 proposal implementation worktree 中运行;不要修错目录,
@@ -58,7 +61,7 @@ Claude sessions can make "last" point at a different task.
 
 覆盖 `.codex-claude-collaboration/implementation-result.json`,字段同 round 1 schema,但:
 
-- `"schema_version": "7.0"`
+- `"schema_version": "8.0"`
 - `"round": {{ROUND}}`
 - `"summary"` 写本轮修复总结
 - `"verification"` 写本轮实际跑过的命令
@@ -80,7 +83,30 @@ Summary: <一句话中文总结本轮修复>
 
 发送前必须:
 
-1. 先运行 phase guard,确认当前是 implementation result 回传阶段,不是初步探索包发送阶段:
+1. 确认 `{{STATE_PATH}}` 存在且是合法 JSON。该文件由 Claude 在发送 rework 前生成/更新。
+   如果缺失,只允许用 prompt 中的 collaboration metadata 恢复同一路径 state,并将 mode 设为 `REWORK`、round 设为 `{{ROUND}}`:
+   ```bash
+   if [ ! -s "{{STATE_PATH}}" ]; then
+     node "{{SKILL_DIR}}/scripts/state.mjs" init \
+       --file "{{STATE_PATH}}" \
+       --collaboration-id "{{COLLABORATION_ID}}" \
+       --execution-id "{{EXECUTION_ID}}" \
+       --change "{{CHANGE}}" \
+       --round "{{ROUND}}" \
+       --mode REWORK \
+       --claude-session-id "{{CLAUDE_SESSION_ID}}" \
+       --claude-session-jsonl-path "{{CLAUDE_SESSION_JSONL_PATH}}" \
+       --claude-session-title "{{CLAUDE_SESSION_TITLE}}" \
+       --claude-worktree "{{CLAUDE_WORKTREE}}" \
+       --codex-worktree "{{CODEX_WORKTREE}}" \
+       --local-branch "{{LOCAL_BRANCH}}" \
+       --remote-branch "feat/{{CHANGE}}" \
+       --workflow-type "{{WORKFLOW_TYPE}}" \
+       --origin-codex-thread-id "{{ORIGIN_CODEX_THREAD_ID}}"
+   fi
+   ```
+   恢复失败则写 `BLOCKED` result,不要打开 Claude Desktop。
+2. 先运行 phase guard,确认当前是 implementation result 回传阶段,不是初步探索包发送阶段:
    ```bash
    node "{{SKILL_DIR}}/scripts/phase-guard.mjs" \
      --state "{{STATE_PATH}}" \
@@ -88,8 +114,8 @@ Summary: <一句话中文总结本轮修复>
      --result-path "{{CODEX_WORKTREE}}/.codex-claude-collaboration/implementation-result.json"
    ```
    guard 不通过时绝对不要打开或输入 Claude Desktop。
-2. 读取并校验 `{{CLAUDE_SESSION_JSONL_PATH}}` 的 `sessionId={{CLAUDE_SESSION_ID}}`。
-3. 获取 `{{DESKTOP_DELIVERY_LOCK_DIR}}` FIFO 锁:
+3. 读取并校验 `{{CLAUDE_SESSION_JSONL_PATH}}` 的 `sessionId={{CLAUDE_SESSION_ID}}`。
+4. 获取 `{{DESKTOP_DELIVERY_LOCK_DIR}}` FIFO 锁:
    ```bash
    node "{{SKILL_DIR}}/scripts/desktop-delivery-lock.mjs" acquire \
      --lock-dir "{{DESKTOP_DELIVERY_LOCK_DIR}}" \
@@ -99,12 +125,12 @@ Summary: <一句话中文总结本轮修复>
      --stale-seconds 900
    ```
    前方有其他发送者时会等待;10 分钟仍失败则不要操作 Claude Desktop,写明 lock timeout。
-4. 用 Computer Use 打开 Claude Desktop。
-5. 按 Claude session title 定位会话。优先点击 accessibility tree 中精确匹配标题的按钮;不要优先用裸坐标。
-6. 在主内容区验证 `{{COLLABORATION_ID}}` / `{{EXECUTION_ID}}` / `{{CHANGE}}` / PR URL 等强标识。
-7. 确认输入框属于该会话后再发送。
-8. state 更新为 `DESKTOP_DELIVERY_SENT`。
-9. 释放锁。
+5. 用 Computer Use 打开 Claude Desktop。
+6. 按 Claude session title 定位会话。优先点击 accessibility tree 中精确匹配标题的按钮;不要优先用裸坐标。
+7. 在主内容区验证 `{{COLLABORATION_ID}}` / `{{EXECUTION_ID}}` / `{{CHANGE}}` / PR URL 等强标识。
+8. 确认输入框属于该会话后再发送。
+9. state 更新为 `DESKTOP_DELIVERY_SENT`。
+10. 释放锁。
 
 定位或校验失败,或出现多个同名会话且无法唯一消歧时不要发送,写明原因并停止。
 
