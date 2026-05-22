@@ -101,6 +101,9 @@ if (phase === "explore-packet") {
   if (!state.origin_codex_session_id) {
     fail("MISSING_CODEX_SESSION", "explore packet delivery must include origin_codex_session_id as the FULL_CODEX_FIRST provenance marker");
   }
+  if (!state.origin_codex_thread_id) {
+    fail("MISSING_CODEX_THREAD", "explore packet delivery must include origin_codex_thread_id for exact --resume-thread routing");
+  }
   const packetPath = fileExistsNonEmpty(args["packet-path"] || state.codex_explore_summary_path, "--packet-path");
   const packet = readFileSync(packetPath, "utf8");
   for (const heading of [
@@ -137,6 +140,7 @@ if (phase === "explore-packet") {
     desktop_reasoning_level: state.desktop_reasoning_level,
     workflow_type: state.workflow_type,
     origin_codex_session_id: state.origin_codex_session_id,
+    origin_codex_thread_id: state.origin_codex_thread_id ?? null,
   });
 }
 

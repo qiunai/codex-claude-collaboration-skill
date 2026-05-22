@@ -6,8 +6,8 @@ V7 defines Codex-Claude Collaboration as a two-way cooperation workflow:
 - `SEND_TO_CLAUDE`: Codex sends a labeled evidence packet through Claude Desktop.
 - `CLAUDE_EXPLORE`: Claude audits, expands, and proposes via OpenSpec.
 - `CODEX_IMPLEMENT`: Codex executes the accepted OpenSpec change.
-- `REVIEW` / `REWORK`: Claude reviews and loops back through broker continuity
-  or the same implementation worktree.
+- `REVIEW` / `REWORK`: Claude reviews and loops back to the exact stored Codex
+  thread.
 
 Active skill path:
 

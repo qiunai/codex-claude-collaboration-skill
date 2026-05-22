@@ -41,14 +41,14 @@ function usage(message) {
     [--previous-version <version>] [--version-file <path>] [--changelog-path <path>] \\
     [--desktop-permission-mode BYPASS_PERMISSION] [--desktop-model-policy LATEST_OPUS] \\
     [--desktop-reasoning-level EXTRA_HIGH] \\
-    [--workflow-type FULL_CODEX_FIRST|CLAUDE_FIRST] [--origin-codex-session-id <id>]
+    [--workflow-type FULL_CODEX_FIRST|CLAUDE_FIRST] [--origin-codex-session-id <id>] [--origin-codex-thread-id <id>]
   state.mjs update --file <path> [--status <status>] [--round <n>] [--codex-thread-id <id>] \\
     [--codex-job-id <id>] [--pr-url <url>] [--merge-commit <sha>] [--implementation-result-path <path>] \\
     [--desktop-delivery-note <text>] [--codex-explore-summary-path <path>] [--claude-packet-path <path>] \\
     [--iteration-version <version>] [--previous-version <version>] [--version-file <path>] [--changelog-path <path>] \\
     [--desktop-permission-mode BYPASS_PERMISSION] [--desktop-model-policy LATEST_OPUS] \\
     [--desktop-reasoning-level EXTRA_HIGH] \\
-    [--workflow-type FULL_CODEX_FIRST|CLAUDE_FIRST] [--origin-codex-session-id <id>]
+    [--workflow-type FULL_CODEX_FIRST|CLAUDE_FIRST] [--origin-codex-session-id <id>] [--origin-codex-thread-id <id>]
   state.mjs get --file <path>`);
   process.exit(2);
 }
@@ -160,6 +160,9 @@ function validatePhaseState(state) {
     if (!state.origin_codex_session_id) {
       usage("SENT_TO_CLAUDE requires origin_codex_session_id as the FULL_CODEX_FIRST provenance marker");
     }
+    if (!state.origin_codex_thread_id) {
+      usage("SENT_TO_CLAUDE requires origin_codex_thread_id for exact --resume-thread routing");
+    }
   }
   if (state.status === "DESKTOP_DELIVERY_SENT") {
     if (!["CODEX_IMPLEMENT", "REWORK"].includes(state.mode)) {
@@ -213,6 +216,7 @@ if (command === "init") {
     desktop_reasoning_level: args["desktop-reasoning-level"] || null,
     workflow_type: args["workflow-type"] || (["CODEX_EXPLORE", "SEND_TO_CLAUDE"].includes(args.mode) ? "FULL_CODEX_FIRST" : "CLAUDE_FIRST"),
     origin_codex_session_id: args["origin-codex-session-id"] || null,
+    origin_codex_thread_id: args["origin-codex-thread-id"] || args["origin-codex-session-id"] || null,
     codex_resume_required: Boolean(args["origin-codex-session-id"]),
     desktop_new_session_required: ["CODEX_EXPLORE", "SEND_TO_CLAUDE"].includes(args.mode),
     codex_thread_id: args["codex-thread-id"] || null,
@@ -266,8 +270,10 @@ if (command === "init") {
   if (args["workflow-type"]) state.workflow_type = args["workflow-type"];
   if (args["origin-codex-session-id"]) {
     state.origin_codex_session_id = args["origin-codex-session-id"];
+    if (!state.origin_codex_thread_id) state.origin_codex_thread_id = args["origin-codex-session-id"];
     state.codex_resume_required = true;
   }
+  if (args["origin-codex-thread-id"]) state.origin_codex_thread_id = args["origin-codex-thread-id"];
   if (!args.status) state.updated_at = nowIso();
   validatePhaseState(state);
   writeJson(file, state);

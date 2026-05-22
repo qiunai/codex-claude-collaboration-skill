@@ -25,11 +25,11 @@ Important fields:
 - `desktop_model_policy` — must be `LATEST_OPUS`
 - `desktop_reasoning_level` — must be `EXTRA_HIGH`
 - `workflow_type` — `FULL_CODEX_FIRST` / `CLAUDE_FIRST`
-- `origin_codex_session_id` — required when `workflow_type=FULL_CODEX_FIRST`;
-  provenance marker only, not a broker CLI argument
-- `codex_resume_required` — true when Claude should preserve Codex continuity;
-  supported broker continuity is `task --resume-last` after verifying the
-  broker's last thread is the intended one
+- `origin_codex_session_id` — required when `workflow_type=FULL_CODEX_FIRST`
+- `origin_codex_thread_id` — exact broker thread id for
+  `task --resume-thread <id>`; defaults to `origin_codex_session_id` when not
+  separately provided
+- `codex_resume_required` — true when Claude must preserve Codex continuity
 - `codex_thread_id`, `codex_job_id`
 - `codex_explore_summary_path` — Codex research packet path
 - `claude_packet_path` — rendered prompt sent to Claude

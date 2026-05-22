@@ -1,12 +1,9 @@
-# Codex Rework Prompt Template (V7 — broker continuity)
+# Codex Rework Prompt Template (V7 — exact thread resume)
 
-Claude renders this for round 2 or 3 and sends it through the broker from the
-same implementation worktree. Supported broker continuity is
-`codex-companion task --resume-last --write --json` when the broker's most
-recent thread is known to be the implementation thread. Exact-thread broker
-resume is not supported. If `--resume-last` cannot be trusted, start a fresh
-task from `{{CODEX_WORKTREE}}` and keep the previous `codex_thread_id` in state
-as provenance.
+Claude renders this for round 2 or 3 and sends it to the stored Codex thread:
+`codex-companion task --resume-thread <codex_thread_id> --write --json`.
+Do not use `--resume-last` for automated rework routing because concurrent
+Claude sessions can make "last" point at a different task.
 
 ```
 /goal Round {{ROUND}} rework: address Claude REVIEW findings for collaboration {{COLLABORATION_ID}}.
