@@ -41,14 +41,18 @@ improve the result instead of inheriting an overconfident conclusion.
 | Claude receives a Codex packet | `CLAUDE_EXPLORE` | Claude OpenSpec Explore |
 | Claude proposal is ready for Codex execution | `CODEX_IMPLEMENT` | Claude -> Codex broker |
 | Claude Desktop receives `codex-claude DONE ...` | `REVIEW` | Codex -> Claude |
-| REVIEW finds fixable issues and round < 3 | `REWORK` | Claude -> same Codex thread |
+| REVIEW finds fixable issues and round < 3 | `REWORK` | Claude -> Codex broker continuity or same implementation worktree |
 
 ## Workflow Types
 
 - `FULL_CODEX_FIRST`: the user started in Codex, Codex explored first, and the
-  packet sent to Claude must include `origin_codex_session_id`. When Claude
-  later sends the proposal back to Codex, it must resume that existing Codex
-  session instead of creating a new one.
+  packet sent to Claude must include `origin_codex_session_id`. This id is a
+  provenance and targeting marker. It is not passed as a broker CLI argument.
+  When Claude later sends the proposal back to Codex, it may use broker
+  continuity only through the currently supported `codex-companion task
+  --resume-last` mode, and only when the broker's most recent Codex thread is
+  known to be the origin session. Otherwise Claude must start a fresh Codex
+  implementation task from the proposal branch worktree.
 - `CLAUDE_FIRST`: the user started in Claude and there is no prior Codex
   session. Claude may create the first Codex task thread for implementation.
 
@@ -61,7 +65,18 @@ Workflow type is not inferred:
   send a proposal to Codex without a prior Codex session id.
 - Claude must preserve `FULL_CODEX_FIRST` from the Codex packet when it later
   starts implementation. If that marker is present but the origin Codex session
-  id is missing, Claude must stop instead of creating a new Codex thread.
+  id is missing, Claude must stop instead of silently changing the workflow
+  type.
+
+Broker resume rule:
+
+- Do not document or invoke exact-thread broker resume commands; they are not
+  part of the supported broker surface.
+- Do not use native direct resume commands.
+- Supported broker continuity is `codex-companion task --resume-last`. It is a
+  last-thread resume, not exact session-id resume. The `origin_codex_session_id`
+  remains in state and prompts so humans and agents can verify whether
+  `--resume-last` is safe for the current dispatch.
 
 ## Product Iteration Versioning
 
@@ -130,7 +145,7 @@ When the user asks Codex to pass investigation results to Claude:
    enabled, Bypass Permission, newest visible Opus model, and Extra High
    reasoning.
 9. The prompt must include `Workflow type`, `Origin Codex session`,
-   `Codex resume required`, and product iteration version metadata.
+   `Codex continuity required`, and product iteration version metadata.
 10. The prompt must start with `/openspec:explore `, including the trailing
    space after the command.
 11. Rename the new session to `Vx.y short summary` and move it into the project
@@ -146,18 +161,27 @@ When Claude has an OpenSpec proposal ready for Codex:
 1. Validate OpenSpec.
 2. Determine workflow type from the active collaboration state or the Codex
    packet Claude received:
-   - `FULL_CODEX_FIRST`: resume `origin_codex_session_id`.
+   - `FULL_CODEX_FIRST`: keep `origin_codex_session_id` as provenance. Use
+     broker `--resume-last` only if it is known to target that origin thread;
+     otherwise create a fresh Codex implementation task.
    - `CLAUDE_FIRST`: create the first Codex task thread.
 3. Push the proposal branch.
-4. Create an isolated Codex worktree.
+4. Create an isolated Codex implementation worktree from the pushed proposal
+   branch `origin/feat/<change>`. In `FULL_CODEX_FIRST`, do not assume the
+   original Codex exploration worktree contains Claude's proposal files; it may
+   have been created from `main`.
 5. Resolve the Claude session JSONL path and latest title.
-6. If state has `workflow_type=FULL_CODEX_FIRST`, start Codex by resuming
-   `origin_codex_session_id`; do not create a new Codex task thread.
+6. If state has `workflow_type=FULL_CODEX_FIRST`, start Codex from the proposal
+   branch worktree. Use `codex-companion task --resume-last --background
+   --write --json` only when the broker's last thread has been verified as the
+   origin Codex session; otherwise start a fresh task with the same worktree and
+   keep the origin session id in state for traceability.
 7. If state has `workflow_type=CLAUDE_FIRST`, start Codex with
    `codex-companion task --background --write --json`.
 8. Codex implements, validates, writes `implementation-result.json`, and
    reports through Claude Desktop Computer Use.
-9. Claude reviews, merges, or sends rework to the same Codex thread.
+9. Claude reviews, merges, or sends rework through broker continuity or the
+   same implementation worktree.
 
 ## Desktop Delivery
 

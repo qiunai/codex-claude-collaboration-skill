@@ -99,7 +99,7 @@ if (phase === "explore-packet") {
     fail("WRONG_WORKFLOW", "explore packet delivery requires workflow_type=FULL_CODEX_FIRST", { workflow_type: state.workflow_type });
   }
   if (!state.origin_codex_session_id) {
-    fail("MISSING_CODEX_SESSION", "explore packet delivery must include origin_codex_session_id for Claude to resume Codex later");
+    fail("MISSING_CODEX_SESSION", "explore packet delivery must include origin_codex_session_id as the FULL_CODEX_FIRST provenance marker");
   }
   const packetPath = fileExistsNonEmpty(args["packet-path"] || state.codex_explore_summary_path, "--packet-path");
   const packet = readFileSync(packetPath, "utf8");

@@ -1,7 +1,9 @@
 # Codex Execution Prompt Template (V7)
 
-Claude renders this template and starts Codex through the broker. Codex starts
-in `{{CODEX_WORKTREE}}` on branch `{{LOCAL_BRANCH}}`.
+Claude renders this template and starts Codex through the broker from the
+implementation worktree `{{CODEX_WORKTREE}}` on branch `{{LOCAL_BRANCH}}`. This
+worktree must be based on `origin/feat/{{CHANGE}}`, because it contains
+Claude's proposal artifacts.
 
 ```
 /goal 执行 OpenSpec 变更 {{CHANGE}} (collaboration {{COLLABORATION_ID}}, execution {{EXECUTION_ID}})。识别为持久目标,自主运行直到完成或硬阻断。完成后必须写 implementation-result.json,通过 Claude Desktop + Computer Use 回传,最后打印哨兵。
@@ -20,8 +22,17 @@ in `{{CODEX_WORKTREE}}` on branch `{{LOCAL_BRANCH}}`.
 - Claude session title: {{CLAUDE_SESSION_TITLE}}
 - Desktop delivery lock: {{DESKTOP_DELIVERY_LOCK_DIR}}
 
+工作流来源:
+- `FULL_CODEX_FIRST`:用户先在 Codex 探索,Claude 后续生成 proposal。此时原始
+  Codex session/worktree 可能基于 main,所以实现必须以当前 `{{CODEX_WORKTREE}}`
+  的 proposal 分支内容为准,不能假设原始探索 worktree 里已有 proposal。
+- `CLAUDE_FIRST`:用户先在 Claude 探索并生成 proposal,Codex 任务应直接从 Claude
+  推送的 proposal 分支 worktree 创建。
+
 硬约束:
-- 不切到其他 worktree,不 checkout `feat/{{CHANGE}}`
+- 当前 worktree 必须来自 `origin/feat/{{CHANGE}}`;如果不是,先停止并让 Claude 修复调度,不要在错误 worktree 上实现
+- 不在原始 Codex 探索 worktree 中实现;Full Codex-first 的探索 worktree 可能只是 main 基线,不包含 Claude proposal
+- 不 checkout 被 worktree 锁定的 `feat/{{CHANGE}}`;本地实现分支保持 rebased 到 `origin/feat/{{CHANGE}}`
 - 不 force-push,不 amend,不 --no-verify
 - 所有推送使用 `git push origin HEAD:feat/{{CHANGE}}`
 - 禁止使用 Claude CLI resume/print、Agent SDK、GitHub Action、shell 方式给 Claude 发消息
@@ -30,6 +41,10 @@ in `{{CODEX_WORKTREE}}` on branch `{{LOCAL_BRANCH}}`.
 ═══════════════════════════════════════════════════════════════════
 ## 1. 必读文档
 ═══════════════════════════════════════════════════════════════════
+
+先确认当前 cwd 中存在 `openspec/changes/{{CHANGE}}/proposal.md`。如果不存在,
+说明 Claude proposal 没有进入这个实现 worktree;不要猜测或从旧探索上下文补写,
+直接写 `implementation-result.json` 为 `BLOCKED` 并说明 proposal branch/worktree 错误。
 
 1. SCOPE.md (如存在)
 2. openspec/changes/{{CHANGE}}/proposal.md

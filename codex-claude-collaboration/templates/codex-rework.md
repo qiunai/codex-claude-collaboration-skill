@@ -1,7 +1,12 @@
-# Codex Rework Prompt Template (V7 — exact-thread resume)
+# Codex Rework Prompt Template (V7 — broker continuity)
 
-Claude renders this for round 2 or 3 and sends it to the same Codex thread with
-`codex-companion task --resume-thread <codex_thread_id>`.
+Claude renders this for round 2 or 3 and sends it through the broker from the
+same implementation worktree. Supported broker continuity is
+`codex-companion task --resume-last --write --json` when the broker's most
+recent thread is known to be the implementation thread. Exact-thread broker
+resume is not supported. If `--resume-last` cannot be trusted, start a fresh
+task from `{{CODEX_WORKTREE}}` and keep the previous `codex_thread_id` in state
+as provenance.
 
 ```
 /goal Round {{ROUND}} rework: address Claude REVIEW findings for collaboration {{COLLABORATION_ID}}.
@@ -20,6 +25,10 @@ Claude renders this for round 2 or 3 and sends it to the same Codex thread with
 - Claude session JSONL: {{CLAUDE_SESSION_JSONL_PATH}}
 - Claude session title: {{CLAUDE_SESSION_TITLE}}
 - Desktop delivery lock: {{DESKTOP_DELIVERY_LOCK_DIR}}
+
+先确认当前 cwd 中存在 `openspec/changes/{{CHANGE}}/proposal.md`。如果不存在,
+说明 rework 没有在 proposal implementation worktree 中运行;不要修错目录,
+直接报告 `BLOCKED` 并说明 worktree 错误。
 
 只修下方 findings。不开新 PR,只 push 到 `feat/{{CHANGE}}`。
 

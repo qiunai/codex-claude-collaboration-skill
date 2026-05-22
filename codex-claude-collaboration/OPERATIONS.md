@@ -18,6 +18,11 @@ Workflow type ownership:
 - Claude must never downgrade `FULL_CODEX_FIRST` to `CLAUDE_FIRST`. If the
   prompt says `FULL_CODEX_FIRST` but no origin Codex session id is available,
   stop instead of creating a new Codex thread.
+- `origin_codex_session_id` is provenance, not a broker CLI argument. The
+  supported broker continuity mode is `codex-companion task --resume-last`, and
+  it is only safe when the broker's most recent Codex thread is known to be that
+  origin session. Do not use exact-thread broker resume or direct native resume
+  commands.
 
 ## 1. Codex Explore -> Claude Review Packet
 
@@ -209,7 +214,7 @@ Computer Use mechanical sequence for this phase:
 11. Paste/send the rendered prompt. It must begin exactly with
    `/openspec:explore `, including the space after `explore`.
    The body must include `Workflow type`, `Origin Codex session`, and
-   `Codex resume required`.
+   `Codex continuity required`.
 12. After send, if the session appears under `Ungrouped`, open the session menu,
    choose `Rename`, and set `$DESKTOP_SESSION_TITLE` such as
    `V1.13 editor optimization`.
@@ -330,25 +335,33 @@ fi
 node "$SKILL_DIR/scripts/state.mjs" init "${STATE_ARGS[@]}"
 ```
 
+This implementation worktree is created from the pushed proposal branch and is
+the only source of truth for Codex implementation edits. This is required for
+both workflow types. In `FULL_CODEX_FIRST`, the original Codex exploration
+worktree may have been created from `main` before Claude wrote proposal files,
+so it must not be treated as containing the current proposal.
+
 ### 3.3 Start Codex
 
-Render `templates/codex-execution.md`, then start Codex. If this collaboration
-began in Codex, resume the original Codex session; otherwise create the first
-Codex task thread:
+Render `templates/codex-execution.md`, then start Codex from the proposal
+branch implementation worktree. If this collaboration began in Codex, use
+broker continuity only when the broker's last Codex thread is known to be the
+origin session; otherwise create a fresh implementation task from this worktree.
 
 ```bash
 cd "$CODEX_WORKTREE"
 unset OPENAI_API_KEY
 export CODEX_CLAUDE_COLLABORATION_FULL_ACCESS=1
 CODEX_COMPANION="${CODEX_COMPANION:-codex-companion}"
+CODEX_CONTINUITY_MODE="${CODEX_CONTINUITY_MODE:-new-task}"
 
-if [ "$WORKFLOW_TYPE" = "FULL_CODEX_FIRST" ]; then
+if [ "$WORKFLOW_TYPE" = "FULL_CODEX_FIRST" ] && [ "$CODEX_CONTINUITY_MODE" = "resume-last" ]; then
   if [ -z "${ORIGIN_CODEX_SESSION_ID:-}" ]; then
     echo "ERROR: FULL_CODEX_FIRST requires ORIGIN_CODEX_SESSION_ID"
     exit 2
   fi
   JOB_OUT=$("$CODEX_COMPANION" \
-    task --resume-thread "$ORIGIN_CODEX_SESSION_ID" --background --write --json \
+    task --resume-last --background --write --json \
     "$(cat "$CODEX_WORKTREE/.codex-claude-collaboration/goal.round-1.md")")
 else
   JOB_OUT=$("$CODEX_COMPANION" \
@@ -405,8 +418,11 @@ Then inspect PR diff, evidence, tests, and `review-checklist.md`.
 
 If clean: archive, merge, mark state `COMPLETED`.
 
-If issues and round < 3: render `templates/codex-rework.md` and send to the
-same Codex thread with `--resume-thread`.
+If issues and round < 3: render `templates/codex-rework.md` and send through
+broker continuity with `codex-companion task --resume-last --write --json` only
+when the broker's most recent thread is the implementation thread. If that
+cannot be verified, create a fresh task from the same implementation worktree
+and include the prior `codex_thread_id` as provenance in state.
 
 If round >= 3 and Blocking/High remains: stop and report.
 

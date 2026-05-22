@@ -158,7 +158,7 @@ function validatePhaseState(state) {
       usage("SENT_TO_CLAUDE requires workflow_type=FULL_CODEX_FIRST");
     }
     if (!state.origin_codex_session_id) {
-      usage("SENT_TO_CLAUDE requires origin_codex_session_id so Claude can return to the existing Codex session");
+      usage("SENT_TO_CLAUDE requires origin_codex_session_id as the FULL_CODEX_FIRST provenance marker");
     }
   }
   if (state.status === "DESKTOP_DELIVERY_SENT") {

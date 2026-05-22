@@ -15,8 +15,10 @@ implement while Claude reviews the result.
 - Forces phase checks so exploration packets and implementation results cannot
   be mixed up.
 - Carries workflow type:
-  - `FULL_CODEX_FIRST`: Codex explored first and Claude must resume the
-    existing Codex session later.
+  - `FULL_CODEX_FIRST`: Codex explored first and Claude keeps the origin Codex
+    session id as provenance. Broker continuity can use `task --resume-last`
+    only when the broker's most recent thread is known to be that origin
+    session.
   - `CLAUDE_FIRST`: Claude started first and may create the first Codex task
     thread.
 - Requires evidence labels in research packets:
@@ -61,6 +63,8 @@ session.
 - Git and `jq`.
 - `codex-companion` available on `PATH` for Claude-to-Codex implementation
   dispatch, or set `CODEX_COMPANION` to the executable path.
+- Broker continuity uses `codex-companion task --resume-last`. This repository
+  does not require or document unsupported exact-thread resume commands.
 - Optional but recommended: OpenSpec commands available in the target project.
 
 No personal paths, local project names, tokens, or state files are required by
@@ -139,8 +143,13 @@ findings before implementation.
    the newest visible Opus model, and Extra High reasoning.
 6. Claude explores, creates or updates OpenSpec artifacts, and later sends the
    proposal back to Codex.
-7. Because the packet used `workflow_type=FULL_CODEX_FIRST`, Claude must resume
-   the original Codex session instead of creating a new Codex thread.
+7. Because the packet used `workflow_type=FULL_CODEX_FIRST`, Claude keeps the
+   origin Codex session id in state. It may use `codex-companion task
+   --resume-last` only when the broker's last thread is verified as that origin
+   session; otherwise it creates a fresh Codex implementation task.
+   Implementation still runs from a worktree based on the pushed proposal
+   branch, because the original Codex exploration worktree may have been
+   created from `main` and may not contain Claude's proposal artifacts.
 8. Codex implements, writes:
    `.codex-claude-collaboration/implementation-result.json`
 9. Codex reports back through Claude Desktop with:
@@ -149,8 +158,9 @@ findings before implementation.
    Summary: <short summary>
    ```
 10. Claude reviews. If clean, Claude archives and merges. If not, Claude sends
-    rework to the same Codex thread. Structural implementation rounds are capped
-    at three.
+    rework through broker continuity (`--resume-last` after verification) or a
+    fresh task from the same implementation worktree. Structural implementation
+    rounds are capped at three.
 
 When the implementation changes the product iteration, the PR should update the
 project version file and Changelog before merge. After merge, future sessions
@@ -172,8 +182,19 @@ proposal.
 ## Safety Rules
 
 - Do not infer workflow type. The entry agent must set it.
-- `FULL_CODEX_FIRST` requires `origin_codex_session_id`.
+- `FULL_CODEX_FIRST` requires `origin_codex_session_id`, but that id is a
+  provenance marker and is not passed to `codex-companion` as an exact resume
+  argument.
 - `CLAUDE_FIRST` is only for cases with no prior Codex session.
+- Do not use unsupported exact-thread broker resume or native direct resume
+  commands in this workflow.
+- Codex implementation must run in a worktree based on the pushed proposal
+  branch. Do not assume a Codex-first exploration worktree created from `main`
+  contains Claude's proposal files.
+- If an agent reports that exact Codex thread resume is unsupported, treat that
+  as expected. The supported broker continuity path is last-thread continuity
+  (`task --resume-last`) after positive verification, or a fresh task from the
+  same proposal implementation worktree.
 - Run `phase-guard.mjs` before any Computer Use send.
 - Do not touch Claude Desktop unless the FIFO lock is acquired.
 - For new Claude Desktop exploration sessions, inspect and repair:
