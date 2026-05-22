@@ -61,6 +61,38 @@ No personal paths, local project names, tokens, or state files are required by
 the repository. Runtime state is written locally under the installed skill's
 `state/` directory and should not be committed.
 
+## OpenSpec
+
+This collaboration workflow assumes project changes are managed with OpenSpec.
+Most deeper collaboration loops use OpenSpec artifacts as the shared contract
+between Codex and Claude:
+
+- `proposal.md` for intent and scope.
+- `design.md` for technical approach.
+- `tasks.md` for implementation phases and verification gates.
+- `specs/*/spec.md` for requirements and scenarios.
+
+Official OpenSpec links:
+
+- Website: <https://openspec.dev/>
+- GitHub repository: <https://github.com/Fission-AI/OpenSpec>
+- Installation docs: <https://github.com/Fission-AI/OpenSpec/blob/main/docs/installation.md>
+
+Install with npm:
+
+```bash
+npm install -g @fission-ai/openspec@latest
+```
+
+Alternative install with Nix:
+
+```bash
+nix profile install github:Fission-AI/OpenSpec
+```
+
+After installation, initialize or use OpenSpec inside your project according to
+the OpenSpec documentation and your coding agent's integration.
+
 ## Full Workflow
 
 Use this when the user starts in Codex and wants Claude to audit Codex's
