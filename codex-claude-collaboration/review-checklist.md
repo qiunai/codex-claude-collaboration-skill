@@ -119,7 +119,8 @@ The emitted prompts mandate retained evidence (and, on rework, an
 - [ ] Never merge on the PR's self-reported green alone — the cheap gates
       (`openspec validate`, typecheck) are re-run by the reviewer first.
 - [ ] If the verdict is clean, do not stop for user approval. Run the accepted
-      completion route: archive, comment on the PR, merge, mark state complete.
+      completion route: archive, comment on the PR, merge, delete the remote
+      feature branch, mark state complete.
 - [ ] If round 3 still has Blocking/High, stop for user direction. If only
       Medium/Low, merge conflicts, archive mechanics, PR comment wording, or
       branch sync remain, continue delegating those to Codex until clean.
@@ -149,7 +150,9 @@ PASS / FAIL  (+ errors)
 - ...
 
 ## 6. Next action
-- If ✅ → run R6: archive → commit → PR acceptance comment → merge to main.
+- If ✅ → run R6: archive → commit → PR acceptance comment → merge to main →
+  delete remote feature branch. Keep local branches/worktrees unless the user
+  explicitly asks for local cleanup.
 - If 🟡/⛔ with Blocking/High and structural round < 3 → run R5: emit the
   substituted /GOAL rework prompt (findings).
 - If 🟡/⛔ with Blocking/High at structural round 3 → stop and ask the user

@@ -253,14 +253,19 @@ Claude should be proactive after Codex returns `READY_FOR_REVIEW`:
    Claude should continue delegating those to Codex until clean.
 6. If all required gates pass and findings are only acceptable nit-level notes,
    Claude should not stop for user approval. It should archive, comment on the
-   PR, merge to `main`, and mark state `COMPLETED`.
+   PR, merge to `main`, delete the remote feature branch, and mark state
+   `COMPLETED`.
 
 Completion order after acceptance:
 
 1. Archive the OpenSpec change and commit/push the archive result.
 2. Reply on the PR with validation summary, archive commit, and merge intent.
 3. Merge the PR to `main` using the repository's normal merge method.
-4. Update collaboration state with merge commit and `COMPLETED`.
+4. Delete the remote feature branch, for example `git push origin --delete
+   feat/<change>`, so the remote keeps only active branches and `main`.
+5. Keep local branches/worktrees by default for audit and recovery; delete them
+   only when the user explicitly asks for local cleanup.
+6. Update collaboration state with merge commit and `COMPLETED`.
 
 ## Desktop Delivery
 

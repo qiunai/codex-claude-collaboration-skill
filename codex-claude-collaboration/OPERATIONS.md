@@ -566,7 +566,15 @@ Required completion order:
    - remaining nit-level notes if any.
 3. Merge the PR using the repository's normal merge method:
    `gh pr merge <number> --squash` or the method already used by the project.
-4. Record the merge commit and mark state complete:
+4. Delete the remote feature branch after merge:
+   ```bash
+   git push origin --delete "feat/$CHANGE"
+   git fetch --prune origin
+   ```
+   The remote should not accumulate completed feature branches. Keep local
+   branches and worktrees by default for audit/recovery; only remove local
+   branches/worktrees when the user explicitly requests local cleanup.
+5. Record the merge commit and mark state complete:
    ```bash
    node "$SKILL_DIR/scripts/state.mjs" update \
      --file "$STATE_FILE" \

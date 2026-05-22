@@ -246,8 +246,9 @@ findings before implementation.
    codex-claude DONE <collaboration_id> round <n>: <STATUS> — <PR_URL_OR_NONE>
    Summary: <short summary>
    ```
-10. Claude reviews. If clean, Claude archives, comments on the PR, and merges
-    without waiting for another user approval. If not, Claude sends rework to
+10. Claude reviews. If clean, Claude archives, comments on the PR, merges, and
+    deletes the remote feature branch without waiting for another user approval.
+    Local branches/worktrees are kept by default. If not, Claude sends rework to
     the stored Codex thread with `--resume-thread`. Structural
     Blocking/Harmful/High implementation rounds are capped at three; minor
     cleanup and merge conflicts continue until clean.
