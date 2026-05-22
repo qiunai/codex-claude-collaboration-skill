@@ -65,15 +65,33 @@ The packet should help Claude challenge Codex. Avoid persuasive certainty.
 
 ### 1.2 Send To Claude
 
-Resolve the local project context first:
+Resolve release metadata first. If `NEXT_VERSION` is omitted, the script
+increments the last numeric segment of `CURRENT_VERSION` (for example `V1.12`
+-> `V1.13`).
+
+```bash
+VERSION_CONTEXT=$(node "$SKILL_DIR/scripts/version-context.mjs" \
+  --current-version "$CURRENT_VERSION" \
+  ${NEXT_VERSION:+--next-version "$NEXT_VERSION"} \
+  ${VERSION_FILE:+--version-file "$VERSION_FILE"} \
+  ${CHANGELOG_PATH:+--changelog-path "$CHANGELOG_PATH"})
+
+PREVIOUS_VERSION=$(echo "$VERSION_CONTEXT" | jq -r '.previous_version')
+ITERATION_VERSION=$(echo "$VERSION_CONTEXT" | jq -r '.iteration_version')
+VERSION_FILE=$(echo "$VERSION_CONTEXT" | jq -r '.version_file')
+CHANGELOG_PATH=$(echo "$VERSION_CONTEXT" | jq -r '.changelog_path')
+```
+
+Resolve the local project context after the iteration version is known:
 
 ```bash
 PROJECT_NAME="${PROJECT_NAME:-$(basename "$(git rev-parse --show-toplevel)")}"
 PROJECT_GROUP="${PROJECT_GROUP:-$PROJECT_NAME}"
+SESSION_SUMMARY="${SESSION_SUMMARY:?set a short session summary}"
 
 PROJECT_CONTEXT=$(node "$SKILL_DIR/scripts/project-context.mjs" \
   --cwd "$(pwd)" \
-  --version "$COLLABORATION_VERSION" \
+  --version "$ITERATION_VERSION" \
   --summary "$SESSION_SUMMARY" \
   --expected-project "$PROJECT_NAME" \
   --group "$PROJECT_GROUP")
@@ -106,6 +124,10 @@ Render `templates/claude-review-packet.md` with:
 - `WORKFLOW_TYPE`
 - `ORIGIN_CODEX_SESSION_ID`
 - `CODEX_RESUME_REQUIRED`
+- `ITERATION_VERSION`
+- `PREVIOUS_VERSION`
+- `VERSION_FILE`
+- `CHANGELOG_PATH`
 - `PACKET_PATH`
 - `PACKET_CONTENT`
 - `STATE_PATH`
@@ -136,6 +158,13 @@ node "$SKILL_DIR/scripts/state.mjs" init \
   --base-branch main \
   --desktop-session-title "$DESKTOP_SESSION_TITLE" \
   --desktop-group-name "$DESKTOP_GROUP_NAME" \
+  --iteration-version "$ITERATION_VERSION" \
+  --previous-version "$PREVIOUS_VERSION" \
+  --version-file "$VERSION_FILE" \
+  --changelog-path "$CHANGELOG_PATH" \
+  --desktop-permission-mode BYPASS_PERMISSION \
+  --desktop-model-policy LATEST_OPUS \
+  --desktop-reasoning-level EXTRA_HIGH \
   --workflow-type "$WORKFLOW_TYPE" \
   --origin-codex-session-id "$ORIGIN_CODEX_SESSION_ID" \
   --codex-explore-summary-path ".codex-claude-collaboration/codex-explore-summary.md" \
@@ -162,19 +191,24 @@ Computer Use mechanical sequence for this phase:
 2. In the bottom selector row, verify `Local` is selected.
 3. Verify the project chip equals `$PROJECT_NAME`.
 4. Verify branch chip is `main` and the `worktree` checkbox is enabled.
-5. If the visible project name is not the current repo name, click the folder
+5. Verify permission mode is `Bypass Permission`; if not, set it before
+   sending. This must be done in the same new session.
+6. Verify the model selector uses the newest visible Opus model. If multiple
+   Opus versions exist, choose the highest/newest Opus shown by Claude Desktop.
+7. Verify reasoning level is `Extra High`.
+8. If the visible project name is not the current repo name, click the folder
    selector and switch to `$GIT_PROJECT_PATH`; then re-check `main` + worktree.
-6. Paste/send the rendered prompt. It must begin exactly with
+9. Paste/send the rendered prompt. It must begin exactly with
    `/openspec:explore `, including the space after `explore`.
    The body must include `Workflow type`, `Origin Codex session`, and
    `Codex resume required`.
-7. After send, if the session appears under `Ungrouped`, open the session menu,
+10. After send, if the session appears under `Ungrouped`, open the session menu,
    choose `Rename`, and set `$DESKTOP_SESSION_TITLE` such as
-   `V7 editor optimization`.
-8. Open the session menu again, choose `Move to group`, and move it to
+   `V1.13 editor optimization`.
+11. Open the session menu again, choose `Move to group`, and move it to
    `$DESKTOP_GROUP_NAME`. If the project group does not exist, create the group
    first, then move the session.
-9. Update state to `SENT_TO_CLAUDE` only after the prompt was sent and rename /
+12. Update state to `SENT_TO_CLAUDE` only after the prompt was sent and rename /
    group placement was completed or explicitly blocked with a reason.
 
 Claude should enter OpenSpec Explore and treat Codex's packet as evidence to
@@ -190,6 +224,8 @@ Claude reads the packet and should:
 4. Look for adjacent hidden cases.
 5. Decide whether there is enough clarity to propose.
 6. If ready, create/update OpenSpec proposal/design/tasks/specs.
+7. Include version-file and Changelog updates in the proposal/tasks when the
+   iteration changes the product version.
 
 Claude should not implement during Explore.
 
@@ -209,6 +245,13 @@ fi
 For `FULL_CODEX_FIRST`, these values come from the Codex packet Claude received.
 For `CLAUDE_FIRST`, there is no origin Codex session id and Claude creates the
 first Codex task thread.
+
+For every product iteration, Claude's proposal/tasks must identify:
+
+- Previous product version.
+- New product iteration version.
+- Version file to update.
+- Changelog path and entry content.
 
 ### 3.1 Validate and Push Proposal
 

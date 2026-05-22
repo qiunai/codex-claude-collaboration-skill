@@ -25,6 +25,10 @@ implement while Claude reviews the result.
   wrong conversation.
 - Validates project context, branch `main`, worktree mode, session naming, and
   group placement for new Claude Desktop exploration sessions.
+- Enforces Claude Desktop session policy for new exploration sessions:
+  Bypass Permission, latest visible Opus model, and Extra High reasoning.
+- Separates skill workflow version from product iteration version, so a V7 skill
+  can manage product iterations such as `V1.12`, `V1.13`, and `V1.14`.
 
 ## Install
 
@@ -107,9 +111,15 @@ findings before implementation.
    ```
 3. Codex resolves local project context:
    ```bash
+   node ~/.codex/skills/codex-claude-collaboration/scripts/version-context.mjs \
+     --current-version V1.12 \
+     --next-version V1.13 \
+     --version-file path/to/version-file \
+     --changelog-path CHANGELOG.md
+
    node ~/.codex/skills/codex-claude-collaboration/scripts/project-context.mjs \
      --cwd "$(pwd)" \
-     --version V1.0 \
+     --version V1.13 \
      --summary "editor optimization" \
      --expected-project "$(basename "$(git rev-parse --show-toplevel)")"
    ```
@@ -123,6 +133,8 @@ findings before implementation.
    /openspec:explore 
    ```
    The space after `explore` is required.
+   Before sending, the Claude Desktop session must be set to Bypass Permission,
+   the newest visible Opus model, and Extra High reasoning.
 6. Claude explores, creates or updates OpenSpec artifacts, and later sends the
    proposal back to Codex.
 7. Because the packet used `workflow_type=FULL_CODEX_FIRST`, Claude must resume
@@ -137,6 +149,11 @@ findings before implementation.
 10. Claude reviews. If clean, Claude archives and merges. If not, Claude sends
     rework to the same Codex thread. Structural implementation rounds are capped
     at three.
+
+When the implementation changes the product iteration, the PR should update the
+project version file and Changelog before merge. After merge, future sessions
+read the new version from `main` and use the next version for the following
+iteration.
 
 ## Partial Workflow
 
@@ -162,8 +179,12 @@ proposal.
   - Project name matches the current repository.
   - Branch is `main`.
   - Worktree is enabled.
+  - Permission mode is `Bypass Permission`.
+  - Model is the newest visible Opus option.
+  - Reasoning level is `Extra High`.
   - Prompt starts with `/openspec:explore `.
-  - Session is renamed with a version prefix such as `V1.0 editor optimization`.
+  - Session is renamed with a product version prefix such as
+    `V1.13 editor optimization`.
   - Session is moved into the correct project group.
 
 ## Repository Layout

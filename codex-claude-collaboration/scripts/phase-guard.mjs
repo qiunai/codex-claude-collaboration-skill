@@ -83,6 +83,18 @@ if (phase === "explore-packet") {
   if (!state.desktop_group_name) {
     fail("MISSING_GROUP", "desktop_group_name is required for post-send Move to group");
   }
+  if (!state.iteration_version || !/^V[0-9]+(?:\.[0-9]+)*$/.test(state.iteration_version)) {
+    fail("MISSING_ITERATION_VERSION", "explore packet delivery requires iteration_version like V1.13");
+  }
+  if (state.desktop_permission_mode !== "BYPASS_PERMISSION") {
+    fail("WRONG_PERMISSION_MODE", "Claude Desktop session must use Bypass Permission", { desktop_permission_mode: state.desktop_permission_mode });
+  }
+  if (state.desktop_model_policy !== "LATEST_OPUS") {
+    fail("WRONG_MODEL_POLICY", "Claude Desktop session must use the latest visible Opus model", { desktop_model_policy: state.desktop_model_policy });
+  }
+  if (state.desktop_reasoning_level !== "EXTRA_HIGH") {
+    fail("WRONG_REASONING_LEVEL", "Claude Desktop session reasoning level must be Extra High", { desktop_reasoning_level: state.desktop_reasoning_level });
+  }
   if (state.workflow_type !== "FULL_CODEX_FIRST") {
     fail("WRONG_WORKFLOW", "explore packet delivery requires workflow_type=FULL_CODEX_FIRST", { workflow_type: state.workflow_type });
   }
@@ -119,6 +131,10 @@ if (phase === "explore-packet") {
     git_project_path: state.git_project_path,
     desktop_session_title: state.desktop_session_title,
     desktop_group_name: state.desktop_group_name,
+    iteration_version: state.iteration_version,
+    desktop_permission_mode: state.desktop_permission_mode,
+    desktop_model_policy: state.desktop_model_policy,
+    desktop_reasoning_level: state.desktop_reasoning_level,
     workflow_type: state.workflow_type,
     origin_codex_session_id: state.origin_codex_session_id,
   });

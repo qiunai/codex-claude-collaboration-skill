@@ -37,11 +37,17 @@ function usage(message) {
     --claude-session-id <id> --claude-session-jsonl-path <path> --claude-session-title <title> \\
     --claude-worktree <path> --codex-worktree <path> --local-branch <branch> --remote-branch <branch> \\
     [--project-name <name>] [--git-project-path <path>] [--base-branch main] \\
-    [--desktop-session-title <title>] [--desktop-group-name <name>] \\
+    [--desktop-session-title <title>] [--desktop-group-name <name>] [--iteration-version <version>] \\
+    [--previous-version <version>] [--version-file <path>] [--changelog-path <path>] \\
+    [--desktop-permission-mode BYPASS_PERMISSION] [--desktop-model-policy LATEST_OPUS] \\
+    [--desktop-reasoning-level EXTRA_HIGH] \\
     [--workflow-type FULL_CODEX_FIRST|CLAUDE_FIRST] [--origin-codex-session-id <id>]
   state.mjs update --file <path> [--status <status>] [--round <n>] [--codex-thread-id <id>] \\
     [--codex-job-id <id>] [--pr-url <url>] [--merge-commit <sha>] [--implementation-result-path <path>] \\
     [--desktop-delivery-note <text>] [--codex-explore-summary-path <path>] [--claude-packet-path <path>] \\
+    [--iteration-version <version>] [--previous-version <version>] [--version-file <path>] [--changelog-path <path>] \\
+    [--desktop-permission-mode BYPASS_PERMISSION] [--desktop-model-policy LATEST_OPUS] \\
+    [--desktop-reasoning-level EXTRA_HIGH] \\
     [--workflow-type FULL_CODEX_FIRST|CLAUDE_FIRST] [--origin-codex-session-id <id>]
   state.mjs get --file <path>`);
   process.exit(2);
@@ -136,6 +142,18 @@ function validatePhaseState(state) {
     if (!state.desktop_group_name) {
       usage("SENT_TO_CLAUDE requires desktop_group_name");
     }
+    if (!state.iteration_version || !/^V[0-9]+(?:\.[0-9]+)*$/.test(state.iteration_version)) {
+      usage("SENT_TO_CLAUDE requires iteration_version like V1.13");
+    }
+    if (state.desktop_permission_mode !== "BYPASS_PERMISSION") {
+      usage("SENT_TO_CLAUDE requires desktop_permission_mode=BYPASS_PERMISSION");
+    }
+    if (state.desktop_model_policy !== "LATEST_OPUS") {
+      usage("SENT_TO_CLAUDE requires desktop_model_policy=LATEST_OPUS");
+    }
+    if (state.desktop_reasoning_level !== "EXTRA_HIGH") {
+      usage("SENT_TO_CLAUDE requires desktop_reasoning_level=EXTRA_HIGH");
+    }
     if (state.workflow_type !== "FULL_CODEX_FIRST") {
       usage("SENT_TO_CLAUDE requires workflow_type=FULL_CODEX_FIRST");
     }
@@ -186,6 +204,13 @@ if (command === "init") {
     base_branch: args["base-branch"] || "main",
     desktop_session_title: args["desktop-session-title"] || null,
     desktop_group_name: args["desktop-group-name"] || null,
+    iteration_version: args["iteration-version"] || null,
+    previous_version: args["previous-version"] || null,
+    version_file: args["version-file"] || null,
+    changelog_path: args["changelog-path"] || null,
+    desktop_permission_mode: args["desktop-permission-mode"] || null,
+    desktop_model_policy: args["desktop-model-policy"] || null,
+    desktop_reasoning_level: args["desktop-reasoning-level"] || null,
     workflow_type: args["workflow-type"] || (["CODEX_EXPLORE", "SEND_TO_CLAUDE"].includes(args.mode) ? "FULL_CODEX_FIRST" : "CLAUDE_FIRST"),
     origin_codex_session_id: args["origin-codex-session-id"] || null,
     codex_resume_required: Boolean(args["origin-codex-session-id"]),
@@ -231,6 +256,13 @@ if (command === "init") {
   if (args["base-branch"]) state.base_branch = args["base-branch"];
   if (args["desktop-session-title"]) state.desktop_session_title = args["desktop-session-title"];
   if (args["desktop-group-name"]) state.desktop_group_name = args["desktop-group-name"];
+  if (args["iteration-version"]) state.iteration_version = args["iteration-version"];
+  if (args["previous-version"]) state.previous_version = args["previous-version"];
+  if (args["version-file"]) state.version_file = args["version-file"];
+  if (args["changelog-path"]) state.changelog_path = args["changelog-path"];
+  if (args["desktop-permission-mode"]) state.desktop_permission_mode = args["desktop-permission-mode"];
+  if (args["desktop-model-policy"]) state.desktop_model_policy = args["desktop-model-policy"];
+  if (args["desktop-reasoning-level"]) state.desktop_reasoning_level = args["desktop-reasoning-level"];
   if (args["workflow-type"]) state.workflow_type = args["workflow-type"];
   if (args["origin-codex-session-id"]) {
     state.origin_codex_session_id = args["origin-codex-session-id"];

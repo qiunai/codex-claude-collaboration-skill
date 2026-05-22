@@ -20,6 +20,10 @@ Important fields:
 - `codex_worktree`
 - `project_name`, `git_project_path`, `base_branch`
 - `desktop_session_title`, `desktop_group_name`
+- `iteration_version`, `previous_version`, `version_file`, `changelog_path`
+- `desktop_permission_mode` — must be `BYPASS_PERMISSION` for new Claude sessions
+- `desktop_model_policy` — must be `LATEST_OPUS`
+- `desktop_reasoning_level` — must be `EXTRA_HIGH`
 - `workflow_type` — `FULL_CODEX_FIRST` / `CLAUDE_FIRST`
 - `origin_codex_session_id` — required when `workflow_type=FULL_CODEX_FIRST`
 - `codex_resume_required` — true when Claude must resume the existing Codex session

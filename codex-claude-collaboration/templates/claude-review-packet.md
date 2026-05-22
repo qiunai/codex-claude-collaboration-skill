@@ -6,6 +6,14 @@ Claude session: {{CLAUDE_SESSION_ID}}
 Workflow type: {{WORKFLOW_TYPE}}
 Origin Codex session: {{ORIGIN_CODEX_SESSION_ID}}
 Codex resume required: {{CODEX_RESUME_REQUIRED}}
+Skill workflow version: V7
+Product iteration version: {{ITERATION_VERSION}}
+Previous product version: {{PREVIOUS_VERSION}}
+Version file: {{VERSION_FILE}}
+Changelog path: {{CHANGELOG_PATH}}
+Desktop permission mode: BYPASS_PERMISSION
+Desktop model policy: LATEST_OPUS
+Desktop reasoning level: EXTRA_HIGH
 
 ## 你的任务
 
@@ -17,6 +25,8 @@ Codex resume required: {{CODEX_RESUME_REQUIRED}}
 6. 不要在 Explore 阶段实现代码。
 7. 如果 `Workflow type` 是 `FULL_CODEX_FIRST`,后续把 proposal 交给 Codex 执行时必须复用 `Origin Codex session`,不要新建 Codex 任务线程。
 8. 只有 `Workflow type` 是 `CLAUDE_FIRST` 且没有 Origin Codex session 时,才允许首次创建新的 Codex 任务线程。
+9. proposal 和后续实现必须围绕 `Product iteration version` 组织;如果创建变更,需同步更新版本文件和 Changelog。
+10. Claude Desktop 当前会话应保持 Bypass Permission、最新可见 Opus 模型、Extra High reasoning。
 
 ## Codex 调研包
 

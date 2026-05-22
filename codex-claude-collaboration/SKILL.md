@@ -63,6 +63,20 @@ Workflow type is not inferred:
   starts implementation. If that marker is present but the origin Codex session
   id is missing, Claude must stop instead of creating a new Codex thread.
 
+## Product Iteration Versioning
+
+Session names and proposal scopes use the product iteration version, not the
+skill version. The skill may be V7 while the product iteration is `V1.13`.
+
+- Resolve `CURRENT_VERSION` from the project and compute `ITERATION_VERSION`
+  before creating a Claude Desktop session.
+- Name sessions as `Vx.y short summary`, for example
+  `V1.13 editor optimization`.
+- Claude proposals and Codex implementation tasks must include the product
+  version file and Changelog updates when the product version changes.
+- Merged PRs should leave `main` with the updated version and Changelog so the
+  next session can read the correct base version.
+
 ## Phase Guard
 
 Before any Computer Use send, run `scripts/phase-guard.mjs` against the state
@@ -71,7 +85,9 @@ file and the artifact being sent.
 - Explore packet delivery must pass:
   `--phase explore-packet`, mode `CODEX_EXPLORE` or `SEND_TO_CLAUDE`,
   `codex_explore_summary_path`, no `implementation_result_path`,
-  `workflow_type=FULL_CODEX_FIRST`, and `origin_codex_session_id`.
+  `workflow_type=FULL_CODEX_FIRST`, `origin_codex_session_id`,
+  `iteration_version`, permission mode `BYPASS_PERMISSION`, model policy
+  `LATEST_OPUS`, and reasoning level `EXTRA_HIGH`.
 - Implementation result delivery must pass:
   `--phase implementation-result`, mode `CODEX_IMPLEMENT` or `REWORK`,
   `implementation_result_path`, matching `collaboration_id` and
@@ -102,16 +118,19 @@ When the user asks Codex to pass investigation results to Claude:
    interpretations, unknowns, and suggested Claude review questions.
 3. Validate the packet with `scripts/validate-claude-packet.mjs`.
 4. Resolve local Git context with `scripts/project-context.mjs`.
-5. Resolve current Codex session context with `scripts/codex-session-context.mjs`;
+5. Resolve product version context with `scripts/version-context.mjs`.
+6. Resolve current Codex session context with `scripts/codex-session-context.mjs`;
    do not send the packet if the current Codex session id is unavailable.
-6. Use Claude Desktop Computer Use to click `New session`, select the matching
+7. Use Claude Desktop Computer Use to click `New session`, select the matching
    local project, force branch `main`, enable worktree, and send
    `templates/claude-review-packet.md`.
-7. The prompt must include `Workflow type`, `Origin Codex session`, and
-   `Codex resume required`.
-8. The prompt must start with `/openspec:explore `, including the trailing
+8. Set Bypass Permission, select the newest visible Opus model, and set
+   reasoning to Extra High before sending.
+9. The prompt must include `Workflow type`, `Origin Codex session`,
+   `Codex resume required`, and product iteration version metadata.
+10. The prompt must start with `/openspec:explore `, including the trailing
    space after the command.
-9. Rename the new session to `Vx short summary` and move it into the project
+11. Rename the new session to `Vx.y short summary` and move it into the project
    group after sending.
 
 Claude should enter OpenSpec Explore, audit Codex's packet, look for hidden
@@ -148,6 +167,13 @@ selectors before sending: Local project, project name equals the current Git
 repo, branch is `main`, and worktree is enabled. If the visible project name is
 wrong, use the folder selector to switch to the current repository's local path
 before sending.
+
+Also verify session controls before sending:
+
+- Permission mode is `Bypass Permission`.
+- Model is the newest visible Opus option. If Claude Desktop later offers
+  Opus 4.8 or Opus 5, choose the latest Opus shown in the UI.
+- Reasoning level is `Extra High`.
 
 Targeting must verify:
 
