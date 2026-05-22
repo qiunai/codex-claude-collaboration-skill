@@ -171,7 +171,8 @@ node "$SKILL_DIR/scripts/state.mjs" init \
   --claude-packet-path ".codex-claude-collaboration/claude-review-packet.md"
 ```
 
-Run the phase guard before touching Claude Desktop:
+Run this data guard before touching Claude Desktop. It confirms the plan and
+artifact shape are coherent; it does not replace UI repair:
 
 ```bash
 node "$SKILL_DIR/scripts/phase-guard.mjs" \
@@ -182,33 +183,40 @@ node "$SKILL_DIR/scripts/phase-guard.mjs" \
 ```
 
 Then acquire the FIFO Desktop lock, open Claude Desktop, create a new session,
-verify project selectors, paste/send the rendered Claude Explore prompt, rename
-and group the session, update state to `SENT_TO_CLAUDE`, and release the lock.
+repair project/model/permission/reasoning controls as needed, run the same guard
+again, paste/send the rendered Claude Explore prompt, rename and group the
+session, update state to `SENT_TO_CLAUDE`, and release the lock.
 
 Computer Use mechanical sequence for this phase:
 
 1. Click `New session`.
-2. In the bottom selector row, verify `Local` is selected.
-3. Verify the project chip equals `$PROJECT_NAME`.
-4. Verify branch chip is `main` and the `worktree` checkbox is enabled.
-5. Verify permission mode is `Bypass Permission`; if not, set it before
-   sending. This must be done in the same new session.
-6. Verify the model selector uses the newest visible Opus model. If multiple
-   Opus versions exist, choose the highest/newest Opus shown by Claude Desktop.
-7. Verify reasoning level is `Extra High`.
-8. If the visible project name is not the current repo name, click the folder
-   selector and switch to `$GIT_PROJECT_PATH`; then re-check `main` + worktree.
-9. Paste/send the rendered prompt. It must begin exactly with
+2. In the bottom selector row, inspect `Local`; if a remote/non-local mode is
+   selected, switch to `Local`.
+3. Inspect the project chip. If it is not `$PROJECT_NAME`, click the folder
+   selector and switch to `$GIT_PROJECT_PATH`.
+4. Inspect the branch chip. If it is not `main`, change it to `main`.
+5. Inspect the `worktree` checkbox. If it is off, enable it.
+6. Inspect permission mode. If it is not `Bypass Permission`, change it to
+   `Bypass Permission` in this same new session.
+7. Inspect the model selector. If it is not the newest visible Opus model,
+   choose the highest/newest Opus option shown by Claude Desktop.
+8. Inspect reasoning level. If it is not `Extra High`, change it to
+   `Extra High`. If the UI abbreviates this as `XH`/`XK`, treat that as the
+   Extra High target only when the label clearly maps to Extra High.
+9. Re-check all repaired controls: Local, `$PROJECT_NAME`, `main`, worktree on,
+   Bypass Permission, newest Opus, Extra High.
+10. Run `phase-guard.mjs` again. If it fails, do not type into Claude Desktop.
+11. Paste/send the rendered prompt. It must begin exactly with
    `/openspec:explore `, including the space after `explore`.
    The body must include `Workflow type`, `Origin Codex session`, and
    `Codex resume required`.
-10. After send, if the session appears under `Ungrouped`, open the session menu,
+12. After send, if the session appears under `Ungrouped`, open the session menu,
    choose `Rename`, and set `$DESKTOP_SESSION_TITLE` such as
    `V1.13 editor optimization`.
-11. Open the session menu again, choose `Move to group`, and move it to
+13. Open the session menu again, choose `Move to group`, and move it to
    `$DESKTOP_GROUP_NAME`. If the project group does not exist, create the group
    first, then move the session.
-12. Update state to `SENT_TO_CLAUDE` only after the prompt was sent and rename /
+14. Update state to `SENT_TO_CLAUDE` only after the prompt was sent and rename /
    group placement was completed or explicitly blocked with a reason.
 
 Claude should enter OpenSpec Explore and treat Codex's packet as evidence to
@@ -412,15 +420,18 @@ Before any Codex -> Claude Desktop send:
 4. Use latest JSONL `customTitle`.
 5. If mode is `SEND_TO_CLAUDE`, click `New session`; otherwise click exact
    title via accessibility tree.
-6. If mode is `SEND_TO_CLAUDE`, verify bottom selectors: Local, project name,
-   branch `main`, and worktree enabled.
-7. Verify main pane has a strong marker:
+6. If mode is `SEND_TO_CLAUDE`, repair bottom selectors if needed: Local,
+   project name, branch `main`, and worktree enabled.
+7. If mode is `SEND_TO_CLAUDE`, repair session controls if needed:
+   Bypass Permission, newest visible Opus, Extra High reasoning.
+8. Verify main pane has a strong marker:
    - `collaboration_id`
    - `execution_id`
    - `change`
    - PR URL/number
    - packet path or unique issue text
-8. Send only if exactly one target is identified.
+9. Send only if exactly one target is identified and the controls have been
+   repaired or already matched.
 
 Duplicate title + no unique marker = do not send.
 

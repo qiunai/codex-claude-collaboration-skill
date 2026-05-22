@@ -80,7 +80,8 @@ skill version. The skill may be V7 while the product iteration is `V1.13`.
 ## Phase Guard
 
 Before any Computer Use send, run `scripts/phase-guard.mjs` against the state
-file and the artifact being sent.
+file and the artifact being sent. The guard is the final verification step, not
+the first UI action.
 
 - Explore packet delivery must pass:
   `--phase explore-packet`, mode `CODEX_EXPLORE` or `SEND_TO_CLAUDE`,
@@ -94,8 +95,10 @@ file and the artifact being sent.
   `execution_id`, and terminal status `READY_FOR_REVIEW` / `FAILED` /
   `BLOCKED`.
 
-If the guard fails, do not open or type into Claude Desktop. Update state to a
-blocked/unknown status and report the mismatch.
+For `SEND_TO_CLAUDE`, use Computer Use to inspect and repair Claude Desktop
+first. If project, branch, worktree, permission, model, or reasoning are wrong,
+change them to the expected values. Run the guard after those repairs and before
+typing the prompt. If the UI cannot be repaired, do not send.
 
 ## Evidence Discipline
 
@@ -121,11 +124,11 @@ When the user asks Codex to pass investigation results to Claude:
 5. Resolve product version context with `scripts/version-context.mjs`.
 6. Resolve current Codex session context with `scripts/codex-session-context.mjs`;
    do not send the packet if the current Codex session id is unavailable.
-7. Use Claude Desktop Computer Use to click `New session`, select the matching
-   local project, force branch `main`, enable worktree, and send
-   `templates/claude-review-packet.md`.
-8. Set Bypass Permission, select the newest visible Opus model, and set
-   reasoning to Extra High before sending.
+7. Use Claude Desktop Computer Use to click `New session`, inspect the current
+   session controls, and repair any mismatch before sending.
+8. Required repaired state: matching local project, branch `main`, worktree
+   enabled, Bypass Permission, newest visible Opus model, and Extra High
+   reasoning.
 9. The prompt must include `Workflow type`, `Origin Codex session`,
    `Codex resume required`, and product iteration version metadata.
 10. The prompt must start with `/openspec:explore `, including the trailing
@@ -168,12 +171,14 @@ repo, branch is `main`, and worktree is enabled. If the visible project name is
 wrong, use the folder selector to switch to the current repository's local path
 before sending.
 
-Also verify session controls before sending:
+Also inspect and repair session controls before sending:
 
-- Permission mode is `Bypass Permission`.
-- Model is the newest visible Opus option. If Claude Desktop later offers
+- If permission mode is not `Bypass Permission`, change it.
+- If the model is not the newest visible Opus option, change it. If Claude Desktop later offers
   Opus 4.8 or Opus 5, choose the latest Opus shown in the UI.
-- Reasoning level is `Extra High`.
+- If reasoning level is not `Extra High`, change it.
+
+Only after these repairs are complete should Codex paste/send the prompt.
 
 Targeting must verify:
 

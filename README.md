@@ -26,7 +26,9 @@ implement while Claude reviews the result.
 - Validates project context, branch `main`, worktree mode, session naming, and
   group placement for new Claude Desktop exploration sessions.
 - Enforces Claude Desktop session policy for new exploration sessions:
-  Bypass Permission, latest visible Opus model, and Extra High reasoning.
+  Bypass Permission, latest visible Opus model, and Extra High reasoning. If the
+  UI is not already in that state, the workflow tells Codex to repair it before
+  sending.
 - Separates skill workflow version from product iteration version, so a V7 skill
   can manage product iterations such as `V1.12`, `V1.13`, and `V1.14`.
 
@@ -174,7 +176,7 @@ proposal.
 - `CLAUDE_FIRST` is only for cases with no prior Codex session.
 - Run `phase-guard.mjs` before any Computer Use send.
 - Do not touch Claude Desktop unless the FIFO lock is acquired.
-- For new Claude Desktop exploration sessions, verify:
+- For new Claude Desktop exploration sessions, inspect and repair:
   - Local project selected.
   - Project name matches the current repository.
   - Branch is `main`.
