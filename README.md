@@ -43,7 +43,8 @@ Install in this order:
 
 The order matters because Claude needs the Codex plugin before it can dispatch
 implementation work to Codex, and this skill requires the plugin command
-`codex-companion task --resume-thread <thread-id>` for safe concurrent routing.
+`codex-companion task --resume-thread <thread-id> --full-access` for safe
+concurrent routing with the required filesystem permissions.
 
 ## 1. Install The Codex Plugin
 
@@ -74,7 +75,8 @@ node codex-claude-collaboration/scripts/verify-codex-companion.mjs \
   --command "$CODEX_COMPANION"
 ```
 
-Expected result: JSON with `"supports_resume_thread": true`.
+Expected result: JSON with `"supports_resume_thread": true` and
+`"supports_full_access": true`.
 
 The plugin patch is stored at:
 
@@ -177,8 +179,9 @@ Claude Code plugin commands from step 1, then rerun the patch command.
 - `codex-companion` available on `PATH` for Claude-to-Codex implementation
   dispatch, or set `CODEX_COMPANION` to the executable path. Install the Codex
   plugin first and ensure the broker advertises
-  `task --resume-thread <thread-id>`.
-- Exact broker continuity uses `codex-companion task --resume-thread <thread-id>`.
+  `task --resume-thread <thread-id> --full-access`.
+- Exact broker continuity uses `codex-companion task --resume-thread <thread-id>
+  --full-access`.
   Do not use `--resume-last` for automated collaboration routing when multiple
   Claude/Codex tasks may be active.
 - Verify the actual executable before dispatch:

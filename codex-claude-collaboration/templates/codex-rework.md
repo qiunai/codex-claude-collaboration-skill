@@ -1,9 +1,12 @@
 # Codex Rework Prompt Template (V8 — exact thread resume)
 
 Claude renders this for round 2 or 3 and sends it to the stored Codex thread:
-`codex-companion task --resume-thread <codex_thread_id> --write --json`.
+`codex-companion task --resume-thread <codex_thread_id> --write --full-access --json`.
 Do not use `--resume-last` for automated rework routing because concurrent
 Claude sessions can make "last" point at a different task.
+Do not omit `--full-access`; implementation rework needs sandbox
+`danger-full-access` for git worktree metadata, external runtime state, and
+Desktop delivery lock files.
 
 ```
 /goal Round {{ROUND}} rework: address Claude REVIEW findings for collaboration {{COLLABORATION_ID}}.

@@ -37,6 +37,7 @@ Claude's proposal artifacts.
 
 硬约束:
 - 当前 worktree 必须来自 `origin/feat/{{CHANGE}}`;如果不是,先停止并让 Claude 修复调度,不要在错误 worktree 上实现
+- 本任务必须由 Claude 通过 `codex-companion task ... --full-access` 启动,对应 Codex sandbox `danger-full-access`;如果提交、推送、写 runtime state 或 Desktop lock 被 sandbox 拦截,这是调度错误,不要假装完成
 - 不在原始 Codex 探索 worktree 中实现;Full Codex-first 的探索 worktree 可能只是 main 基线,不包含 Claude proposal
 - 不 checkout 被 worktree 锁定的 `feat/{{CHANGE}}`;本地实现分支保持 rebased 到 `origin/feat/{{CHANGE}}`
 - 不 force-push,不 amend,不 --no-verify

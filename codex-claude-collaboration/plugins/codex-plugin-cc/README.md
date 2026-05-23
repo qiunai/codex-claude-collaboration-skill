@@ -5,12 +5,15 @@ This directory carries the companion plugin update required by
 
 The upstream Codex plugin already contains the lower-level app-server
 `thread/resume` path. The missing piece is the Claude broker command surface:
-`codex-companion task --resume-thread <thread-id>`.
+`codex-companion task --resume-thread <thread-id>` plus
+`--full-access` / `--sandbox danger-full-access`.
 
-The patch in this directory adds that command option so Claude can route a
+The patch in this directory adds those command options so Claude can route a
 follow-up implementation or rework request to the exact Codex thread that
-belongs to the active collaboration. This prevents `--resume-last` from
-selecting another active Claude/Codex task when several sessions are running.
+belongs to the active collaboration, and start it with full filesystem access
+when implementation needs to write git metadata, external evidence/state, or
+Desktop delivery lock files. This prevents `--resume-last` from selecting
+another active Claude/Codex task when several sessions are running.
 
 Upstream PR:
 

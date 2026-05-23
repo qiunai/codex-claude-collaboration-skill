@@ -46,8 +46,14 @@ if (!output.includes("--resume-thread <thread-id>")) {
   process.exit(1);
 }
 
+if (!output.includes("--full-access") || !output.includes("danger-full-access")) {
+  console.error(`ERROR: ${commandForShell} does not advertise task --full-access / --sandbox danger-full-access.`);
+  process.exit(1);
+}
+
 console.log(JSON.stringify({
   ok: true,
   command: commandForShell,
   supports_resume_thread: true,
+  supports_full_access: true,
 }, null, 2));

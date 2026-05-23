@@ -24,6 +24,10 @@ Workflow type ownership:
   collaboration routing. Do not use `--resume-last`; it searches for the latest
   resumable task thread in the current context and can select the wrong thread
   when multiple Claude sessions run concurrently.
+- Use `--full-access` for implementation and rework dispatch. Resume targets
+  the identity of a Codex thread, but it does not reliably inherit the original
+  app session's filesystem sandbox. The broker must pass sandbox
+  `danger-full-access` explicitly.
 
 ## 0. Installation Prerequisites
 
@@ -425,6 +429,7 @@ Claude session's most recent task.
 cd "$CODEX_WORKTREE"
 unset OPENAI_API_KEY
 export CODEX_CLAUDE_COLLABORATION_FULL_ACCESS=1
+export CODEX_HANDOFF_FULL_ACCESS=1
 CODEX_COMPANION="${CODEX_COMPANION:-$HOME/.claude/plugins/marketplaces/openai-codex/plugins/codex/scripts/codex-companion.mjs}"
 node "$SKILL_DIR/scripts/verify-codex-companion.mjs" --command "$CODEX_COMPANION"
 if [[ "$CODEX_COMPANION" == *.mjs ]]; then
@@ -439,11 +444,11 @@ if [ "$WORKFLOW_TYPE" = "FULL_CODEX_FIRST" ]; then
     exit 2
   fi
   JOB_OUT=$("${CODEX_COMPANION_CMD[@]}" \
-    task --resume-thread "$ORIGIN_CODEX_THREAD_ID" --background --write --json \
+    task --resume-thread "$ORIGIN_CODEX_THREAD_ID" --background --write --full-access --json \
     "$(cat "$CODEX_WORKTREE/.codex-claude-collaboration/goal.round-1.md")")
 else
   JOB_OUT=$("${CODEX_COMPANION_CMD[@]}" \
-    task --background --write --json \
+    task --background --write --full-access --json \
     "$(cat "$CODEX_WORKTREE/.codex-claude-collaboration/goal.round-1.md")")
 fi
 
@@ -529,6 +534,10 @@ If Blocking/Harmful or High issues exist and the structural round is less than
 stored `codex_thread_id`:
 
 `codex-companion task --resume-thread "$CODEX_THREAD_ID" --write --json`.
+
+Use `--full-access` on every rework dispatch:
+
+`codex-companion task --resume-thread "$CODEX_THREAD_ID" --write --full-access --json`.
 
 Codex fixes only the listed findings, pushes to `feat/$CHANGE`, writes a new
 implementation result, and reports through Claude Desktop.

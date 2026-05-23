@@ -77,7 +77,10 @@ function supportsResumeThread(root) {
   const script = path.join(root, "scripts", "codex-companion.mjs");
   const text = readFileSync(script, "utf8");
   return text.includes("--resume-thread <thread-id>")
+    && text.includes("--full-access")
+    && text.includes("danger-full-access")
     && text.includes("resumeThreadId")
+    && text.includes("CODEX_CLAUDE_COLLABORATION_FULL_ACCESS")
     && text.includes('"resume-thread"');
 }
 

@@ -23,7 +23,7 @@ Desktop reasoning level: EXTRA_HIGH
 4. 对用户原始问题举一反三，检查相邻流程是否有类似风险。
 5. 如果探索足够成熟，再创建或更新 OpenSpec proposal/design/tasks/specs。
 6. 不要在 Explore 阶段实现代码。
-7. 如果 `Workflow type` 是 `FULL_CODEX_FIRST`,后续把 proposal 交给 Codex 执行时必须使用 `Origin Codex thread` 精确恢复: `codex-companion task --resume-thread <Origin Codex thread>`。
+7. 如果 `Workflow type` 是 `FULL_CODEX_FIRST`,后续把 proposal 交给 Codex 执行时必须使用 `Origin Codex thread` 精确恢复并显式打开 full access: `codex-companion task --resume-thread <Origin Codex thread> --full-access`。
 8. `FULL_CODEX_FIRST` 的原始 Codex worktree 可能只是 main 基线,不包含 Claude proposal。执行实现前必须从已推送的 proposal 分支创建/使用 Codex implementation worktree。
 9. 只有 `Workflow type` 是 `CLAUDE_FIRST` 且没有 Origin Codex thread 时,才允许首次创建新的 Codex 任务线程。
 10. proposal 和后续实现必须围绕 `Product iteration version` 组织;如果创建变更,需同步更新版本文件和 Changelog。

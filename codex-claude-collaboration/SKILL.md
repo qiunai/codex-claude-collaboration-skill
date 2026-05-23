@@ -38,7 +38,7 @@ Before using this workflow in Claude or Codex:
 
 1. Install the Claude Code Codex plugin and verify it supports exact thread
    routing:
-   `codex-companion task --resume-thread <thread-id>`.
+   `codex-companion task --resume-thread <thread-id> --full-access`.
 2. Install OpenSpec in the target development environment.
 3. Install this skill in both Codex and Claude when both agents participate in
    the loop.
@@ -100,9 +100,13 @@ Broker resume rule:
   `plugins/codex-plugin-cc/` for environments where the published plugin does
   not yet include upstream PR 344.
 - A valid `codex-companion` supports exact thread resume:
-  `codex-companion task --resume-thread <thread-id>`.
+  `codex-companion task --resume-thread <thread-id> --full-access`.
 - `--resume-thread` is wired to Codex app-server `thread/resume`, so it targets
   the supplied thread id instead of searching for the latest thread.
+- `--full-access` maps to Codex app-server sandbox
+  `danger-full-access`. Resume does not safely inherit the caller's Codex app
+  permissions; Claude must pass the sandbox explicitly for implementation and
+  rework tasks.
 - Some Codex/companion UI output labels this same value as "Codex session ID";
   in this skill, call it `origin_codex_thread_id` and pass it only to
   `--resume-thread`.
@@ -224,9 +228,9 @@ When Claude has an OpenSpec proposal ready for Codex:
 5. Resolve the Claude session JSONL path and latest title.
 6. If state has `workflow_type=FULL_CODEX_FIRST`, start Codex from the proposal
    branch worktree using `codex-companion task --resume-thread
-   <origin_codex_thread_id> --background --write --json`.
+   <origin_codex_thread_id> --background --write --full-access --json`.
 7. If state has `workflow_type=CLAUDE_FIRST`, start Codex with
-   `codex-companion task --background --write --json`.
+   `codex-companion task --background --write --full-access --json`.
 8. Codex implements, validates, writes `implementation-result.json`, and
    reports through Claude Desktop Computer Use.
 9. Claude reviews, merges, or sends rework to the exact stored Codex thread.
