@@ -184,6 +184,12 @@ Claude Code plugin commands from step 1, then rerun the patch command.
   --full-access`.
   Do not use `--resume-last` for automated collaboration routing when multiple
   Claude/Codex tasks may be active.
+- Full access must be forwarded at both Codex app-server layers: thread
+  start/resume uses sandbox `danger-full-access`, and turn start uses
+  `sandboxPolicy: { type: "dangerFullAccess" }`. If a resumed Codex task can
+  read files but cannot `git add`, write runtime state, or take the Desktop
+  delivery lock, rerun the bundled plugin patch and restart Claude's Codex
+  broker/app-server so stale processes cannot keep the old sandbox behavior.
 - Verify the actual executable before dispatch:
   `node ~/.claude/skills/codex-claude-collaboration/scripts/verify-codex-companion.mjs --command "$CODEX_COMPANION"`.
   If `CODEX_COMPANION` points at a `.mjs` plugin script, the workflow invokes it

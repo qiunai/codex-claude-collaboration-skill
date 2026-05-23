@@ -2,7 +2,8 @@
 // Verify the actual codex-companion executable supports exact thread resume.
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 import process from "node:process";
 
 function usage(message) {
@@ -51,9 +52,27 @@ if (!output.includes("--full-access") || !output.includes("danger-full-access"))
   process.exit(1);
 }
 
+function resolveCompanionScript(commandText) {
+  if (commandText.endsWith(".mjs") && existsSync(commandText)) return commandText;
+  const match = commandText.match(/\bnode\s+((?:"[^"]+")|(?:'[^']+')|(?:\S+codex-companion\.mjs))/);
+  if (!match) return null;
+  return match[1].replace(/^["']|["']$/g, "");
+}
+
+const companionScript = resolveCompanionScript(trimmed);
+if (companionScript) {
+  const codexLib = path.join(path.dirname(companionScript), "lib", "codex.mjs");
+  const codexText = existsSync(codexLib) ? readFileSync(codexLib, "utf8") : "";
+  if (!codexText.includes("sandboxPolicy") || !codexText.includes("dangerFullAccess")) {
+    console.error(`ERROR: ${codexLib} does not forward full-access sandboxPolicy to turn/start.`);
+    process.exit(1);
+  }
+}
+
 console.log(JSON.stringify({
   ok: true,
   command: commandForShell,
   supports_resume_thread: true,
   supports_full_access: true,
+  supports_turn_full_access: companionScript ? true : null,
 }, null, 2));

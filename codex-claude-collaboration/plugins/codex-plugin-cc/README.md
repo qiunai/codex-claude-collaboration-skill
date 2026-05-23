@@ -6,7 +6,8 @@ This directory carries the companion plugin update required by
 The upstream Codex plugin already contains the lower-level app-server
 `thread/resume` path. The missing piece is the Claude broker command surface:
 `codex-companion task --resume-thread <thread-id>` plus
-`--full-access` / `--sandbox danger-full-access`.
+`--full-access` / `--sandbox danger-full-access`, and explicit full-access
+forwarding to `turn/start`.
 
 The patch in this directory adds those command options so Claude can route a
 follow-up implementation or rework request to the exact Codex thread that
@@ -14,6 +15,12 @@ belongs to the active collaboration, and start it with full filesystem access
 when implementation needs to write git metadata, external evidence/state, or
 Desktop delivery lock files. This prevents `--resume-last` from selecting
 another active Claude/Codex task when several sessions are running.
+
+For resumed threads, full access must be applied twice: `thread/resume` receives
+sandbox `danger-full-access`, then `turn/start` receives
+`sandboxPolicy: { type: "dangerFullAccess" }`. Without the turn-level policy, a
+resumed thread can still appear writable in metadata while the actual command
+execution remains sandboxed.
 
 Upstream PR:
 
@@ -23,7 +30,7 @@ Upstream PR:
 
 - `resume-thread-runtime.patch`: runtime patch for an installed
   `codex-plugin-cc` plugin root. It updates `scripts/codex-companion.mjs` and
-  `CHANGELOG.md`.
+  `scripts/lib/codex.mjs`, plus `CHANGELOG.md`.
 - `../../scripts/install-codex-plugin-cc-resume-thread.mjs`: helper that finds
   installed Claude Code Codex plugin roots, applies the runtime patch, and
   verifies that the command advertises `--resume-thread <thread-id>`.

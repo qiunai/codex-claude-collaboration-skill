@@ -1,14 +1,16 @@
 diff --git a/CHANGELOG.md b/CHANGELOG.md
-index d647561..657fd00 100644
+index d647561..046bcae 100644
 --- a/CHANGELOG.md
 +++ b/CHANGELOG.md
-@@ -1,5 +1,10 @@
+@@ -1,5 +1,12 @@
  # Changelog
  
 +## Unreleased
 +
 +- Add `codex-companion task --resume-thread <thread-id>` for routing a delegated
 +  task continuation to an exact Codex thread.
++- Add `codex-companion task --full-access` and `--sandbox <mode>` for delegated
++  tasks that need an explicit Codex filesystem sandbox.
 +
  ## 1.0.0
  
@@ -183,3 +185,30 @@ index 35222fd..4a053a0 100644
          jobId: job.id,
          onProgress: progress
        }),
+diff --git a/scripts/lib/codex.mjs b/scripts/lib/codex.mjs
+index f2fe88b..a0952ce 100644
+--- a/scripts/lib/codex.mjs
++++ b/scripts/lib/codex.mjs
+@@ -76,6 +76,13 @@ function buildResumeParams(threadId, cwd, options = {}) {
+   };
+ }
+ 
++function buildTurnSandboxPolicy(sandbox) {
++  if (sandbox === "danger-full-access") {
++    return { type: "dangerFullAccess" };
++  }
++  return null;
++}
++
+ /** @returns {UserInput[]} */
+ function buildTurnInput(prompt) {
+   return [{ type: "text", text: prompt, text_elements: [] }];
+@@ -1007,6 +1014,8 @@ export async function runAppServerTurn(cwd, options = {}) {
+           input: buildTurnInput(prompt),
+           model: options.model ?? null,
+           effort: options.effort ?? null,
++          approvalPolicy: options.approvalPolicy ?? "never",
++          sandboxPolicy: buildTurnSandboxPolicy(options.sandbox),
+           outputSchema: options.outputSchema ?? null
+         }),
+       { onProgress: options.onProgress }

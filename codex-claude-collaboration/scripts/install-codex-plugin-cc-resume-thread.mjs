@@ -75,13 +75,17 @@ function candidateRoots(args) {
 
 function supportsResumeThread(root) {
   const script = path.join(root, "scripts", "codex-companion.mjs");
+  const codexLib = path.join(root, "scripts", "lib", "codex.mjs");
   const text = readFileSync(script, "utf8");
+  const codexText = existsSync(codexLib) ? readFileSync(codexLib, "utf8") : "";
   return text.includes("--resume-thread <thread-id>")
     && text.includes("--full-access")
     && text.includes("danger-full-access")
     && text.includes("resumeThreadId")
     && text.includes("CODEX_CLAUDE_COLLABORATION_FULL_ACCESS")
-    && text.includes('"resume-thread"');
+    && text.includes('"resume-thread"')
+    && codexText.includes("sandboxPolicy")
+    && codexText.includes("dangerFullAccess");
 }
 
 function run(command, args, options = {}) {

@@ -107,6 +107,13 @@ Broker resume rule:
   `danger-full-access`. Resume does not safely inherit the caller's Codex app
   permissions; Claude must pass the sandbox explicitly for implementation and
   rework tasks.
+- Full access must be applied at both app-server boundaries: `thread/start` or
+  `thread/resume` receives sandbox `danger-full-access`, and the following
+  `turn/start` receives sandboxPolicy `{ type: "dangerFullAccess" }` plus
+  approvalPolicy `never`. If git metadata, external runtime state, or Desktop
+  delivery lock writes are still blocked, treat the installed broker as stale or
+  incomplete and rerun the bundled plugin patch, then restart Claude's Codex
+  broker/app-server process before dispatching more work.
 - Some Codex/companion UI output labels this same value as "Codex session ID";
   in this skill, call it `origin_codex_thread_id` and pass it only to
   `--resume-thread`.
