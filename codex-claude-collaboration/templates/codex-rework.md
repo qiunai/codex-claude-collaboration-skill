@@ -1,14 +1,3 @@
-# Codex Rework Prompt Template (V8 — exact thread resume)
-
-Claude renders this for round 2 or 3 and sends it to the stored Codex thread:
-`codex-companion task --resume-thread <codex_thread_id> --write --full-access --json`.
-Do not use `--resume-last` for automated rework routing because concurrent
-Claude sessions can make "last" point at a different task.
-Do not omit `--full-access`; implementation rework needs sandbox
-`danger-full-access` for git worktree metadata, external runtime state, and
-Desktop delivery lock files.
-
-```
 /goal Round {{ROUND}} rework: address Claude REVIEW findings for collaboration {{COLLABORATION_ID}}.
 
 ═══════════════════════════════════════════════════════════════════
@@ -28,6 +17,13 @@ Desktop delivery lock files.
 - Desktop delivery lock: {{DESKTOP_DELIVERY_LOCK_DIR}}
 - workflow type: {{WORKFLOW_TYPE}}
 - origin Codex thread: {{ORIGIN_CODEX_THREAD_ID}}
+
+调度说明:
+- Claude 必须把本 prompt 发送到已存储的 Codex thread:
+  `codex-companion task --resume-thread <codex_thread_id> --write --full-access --json`
+- 禁止用 `--resume-last` 做自动 rework 路由;并发 Claude session 会让 "last" 指向错误任务
+- 禁止省略 `--full-access`;rework 需要 `danger-full-access` 写 git metadata、runtime state 和 Desktop delivery lock
+- 模板渲染后的 prompt 必须以 `/goal` 作为第一行第一字符;任何标题、模板说明或 Markdown fence 都不得出现在 `/goal` 前
 
 先确认当前 cwd 中存在 `openspec/changes/{{CHANGE}}/proposal.md`。如果不存在,
 说明 rework 没有在 proposal implementation worktree 中运行;不要修错目录,
@@ -144,4 +140,3 @@ Summary: <一句话中文总结本轮修复>
 最终回复最后一行必须且只能是:
 
 [CODEX_GOAL_COMPLETE]
-```

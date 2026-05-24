@@ -1,11 +1,3 @@
-# Codex Execution Prompt Template (V8)
-
-Claude renders this template and starts Codex through the broker from the
-implementation worktree `{{CODEX_WORKTREE}}` on branch `{{LOCAL_BRANCH}}`. This
-worktree must be based on `origin/feat/{{CHANGE}}`, because it contains
-Claude's proposal artifacts.
-
-```
 /goal 执行 OpenSpec 变更 {{CHANGE}} (collaboration {{COLLABORATION_ID}}, execution {{EXECUTION_ID}})。识别为持久目标,自主运行直到完成或硬阻断。完成后必须写 implementation-result.json,通过 Claude Desktop + Computer Use 回传,最后打印哨兵。
 
 ═══════════════════════════════════════════════════════════════════
@@ -27,6 +19,11 @@ Claude's proposal artifacts.
 - previous product version: {{PREVIOUS_VERSION}}
 - version file: {{VERSION_FILE}}
 - changelog path: {{CHANGELOG_PATH}}
+
+调度说明:
+- Claude 从 implementation worktree `{{CODEX_WORKTREE}}` 启动 Codex,本地分支为 `{{LOCAL_BRANCH}}`
+- 该 worktree 必须基于 `origin/feat/{{CHANGE}}`,因为 Claude proposal artifacts 在这个分支中
+- 模板渲染后的 prompt 必须以 `/goal` 作为第一行第一字符;任何标题、模板说明或 Markdown fence 都不得出现在 `/goal` 前
 
 工作流来源:
 - `FULL_CODEX_FIRST`:用户先在 Codex 探索,Claude 后续生成 proposal。此时原始
@@ -212,4 +209,3 @@ Summary: <一句话中文总结>
 完成 implementation-result.json + Desktop delivery 后,最终回复最后一行必须且只能是:
 
 [CODEX_GOAL_COMPLETE]
-```

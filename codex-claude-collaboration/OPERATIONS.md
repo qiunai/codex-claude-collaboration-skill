@@ -421,9 +421,11 @@ so it must not be treated as containing the current proposal.
 
 Render `templates/codex-execution.md`, including `STATE_PATH="$STATE_FILE"` and
 `DESKTOP_DELIVERY_LOCK_DIR="$LOCK_DIR"`, then start Codex from the proposal
-branch implementation worktree. If this collaboration began in Codex, resume
-the exact stored Codex thread. This avoids `--resume-last` selecting another
-Claude session's most recent task.
+branch implementation worktree. The rendered file must begin with `/goal` as
+the first characters. Do not prepend Markdown titles, template explanations, or
+code fences to the payload passed to `codex-companion task`. If this
+collaboration began in Codex, resume the exact stored Codex thread. This avoids
+`--resume-last` selecting another Claude session's most recent task.
 
 ```bash
 cd "$CODEX_WORKTREE"

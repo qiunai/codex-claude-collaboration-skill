@@ -238,9 +238,13 @@ When Claude has an OpenSpec proposal ready for Codex:
    <origin_codex_thread_id> --background --write --full-access --json`.
 7. If state has `workflow_type=CLAUDE_FIRST`, start Codex with
    `codex-companion task --background --write --full-access --json`.
-8. Codex implements, validates, writes `implementation-result.json`, and
+8. The rendered Codex implementation/rework prompt must begin with `/goal` as
+   the first characters. Do not prepend Markdown titles, template explanations,
+   or code fences before `/goal`; put any context under later sections in the
+   goal body.
+9. Codex implements, validates, writes `implementation-result.json`, and
    reports through Claude Desktop Computer Use.
-9. Claude reviews, merges, or sends rework to the exact stored Codex thread.
+10. Claude reviews, merges, or sends rework to the exact stored Codex thread.
 
 ## Claude Review, Rework, And Merge
 

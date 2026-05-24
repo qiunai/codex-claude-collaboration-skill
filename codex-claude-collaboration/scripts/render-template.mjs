@@ -2,7 +2,7 @@
 // Render Codex-Claude Collaboration templates.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import process from "node:process";
 
 function usage(message) {
@@ -52,6 +52,11 @@ rendered = rendered.replace(/\{\{([A-Z0-9_]+)\}\}/g, (match, key) => {
   }
   return args.vars[key];
 });
+
+const goalTemplateNames = new Set(["codex-execution.md", "codex-rework.md"]);
+if (goalTemplateNames.has(basename(args.template)) && !rendered.startsWith("/goal")) {
+  throw new Error(`${args.template} must render with /goal as the first characters`);
+}
 
 const out = resolve(args.out);
 mkdirSync(dirname(out), { recursive: true });
