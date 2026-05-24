@@ -1,343 +1,173 @@
 # Codex-Claude Collaboration Skill
 
-`codex-claude-collaboration` is a portable skill for coordinating Codex and
-Claude across research, OpenSpec exploration, implementation, review, rework,
-and merge.
+Manual prompt handoff between Codex and Claude.
 
-The skill is designed for teams that want Codex and Claude to work as two
-reviewing agents instead of a one-way task runner. Codex can gather tool-backed
-evidence first, Claude can challenge and deepen the analysis, then Codex can
-implement while Claude reviews the result.
+V9 removes automated agent-to-agent delivery. The skill only helps an agent
+prepare clean prompts that the user copies between Codex and Claude.
 
-## What It Does
+## Purpose
 
-- Sends Codex research packets to Claude Desktop through Computer Use.
-- Forces phase checks so exploration packets and implementation results cannot
-  be mixed up.
-- Carries workflow type:
-  - `FULL_CODEX_FIRST`: Codex explored first and Claude later resumes the exact
-    origin Codex thread with `task --resume-thread <thread-id>`.
-  - `CLAUDE_FIRST`: Claude started first and may create the first Codex task
-    thread.
-- Requires evidence labels in research packets:
-  `[CONFIRMED]`, `[LIKELY]`, `[UNKNOWN]`, `[USER-OBSERVED]`.
-- Uses a FIFO lock for Claude Desktop so concurrent agents do not type into the
-  wrong conversation.
-- Validates project context, branch `main`, worktree mode, session naming, and
-  group placement for new Claude Desktop exploration sessions.
-- Enforces Claude Desktop session policy for new exploration sessions:
-  Bypass Permission, latest visible Opus model, and Extra High reasoning. If the
-  UI is not already in that state, the workflow tells Codex to repair it before
-  sending.
-- Separates skill workflow version from product iteration version, so a V8 skill
-  can manage product iterations such as `V1.12`, `V1.13`, and `V1.14`.
+Use Codex and Claude as two independent reviewers:
 
-## Install Order
+1. Codex investigates with local tools and summarizes evidence.
+2. The user asks Codex to prepare a prompt for Claude.
+3. Claude challenges the analysis and may create an OpenSpec proposal.
+4. The user asks Claude or Codex to prepare a prompt for Codex execution.
+5. Codex implements and returns a review summary.
+6. The user copies the result back to Claude for review.
 
-Install in this order:
+The goal is better judgment through cross-review, not automatic message passing.
 
-1. Install the Codex plugin for Claude Code, then apply/verify this repository's
-   exact-thread patch.
-2. Install OpenSpec.
-3. Install `codex-claude-collaboration` for Codex and Claude.
+## Install
 
-The order matters because Claude needs the Codex plugin before it can dispatch
-implementation work to Codex, and this skill requires the plugin command
-`codex-companion task --resume-thread <thread-id> --full-access` for safe
-concurrent routing with the required filesystem permissions.
-
-## 1. Install The Codex Plugin
-
-In Claude Code, install the OpenAI Codex plugin:
-
-```text
-/plugin marketplace add openai/codex-plugin-cc
-/plugin install codex@openai-codex
-/reload-plugins
-/codex:setup
-```
-
-Until the upstream thread-resume PR is included in the published plugin, apply
-the bundled runtime patch from this repository:
+Install the skill for Codex and/or Claude:
 
 ```bash
 git clone https://github.com/qiunai/codex-claude-collaboration-skill.git
 cd codex-claude-collaboration-skill
-
-node codex-claude-collaboration/scripts/install-codex-plugin-cc-resume-thread.mjs
-```
-
-Then verify the broker that Claude will call:
-
-```bash
-CODEX_COMPANION="${CODEX_COMPANION:-$HOME/.claude/plugins/marketplaces/openai-codex/plugins/codex/scripts/codex-companion.mjs}"
-node codex-claude-collaboration/scripts/verify-codex-companion.mjs \
-  --command "$CODEX_COMPANION"
-```
-
-Expected result: JSON with `"supports_resume_thread": true` and
-`"supports_full_access": true`.
-
-The plugin patch is stored at:
-
-```text
-codex-claude-collaboration/plugins/codex-plugin-cc/
-```
-
-Upstream PR:
-
-<https://github.com/openai/codex-plugin-cc/pull/344>
-
-## 2. Install OpenSpec
-
-This collaboration workflow assumes project changes are managed with OpenSpec.
-Most deeper collaboration loops use OpenSpec artifacts as the shared contract
-between Codex and Claude:
-
-- `proposal.md` for intent and scope.
-- `design.md` for technical approach.
-- `tasks.md` for implementation phases and verification gates.
-- `specs/*/spec.md` for requirements and scenarios.
-
-Official OpenSpec links:
-
-- Website: <https://openspec.dev/>
-- GitHub repository: <https://github.com/Fission-AI/OpenSpec>
-- Installation docs: <https://github.com/Fission-AI/OpenSpec/blob/main/docs/installation.md>
-
-Install with npm:
-
-```bash
-npm install -g @fission-ai/openspec@latest
-```
-
-Alternative install with Nix:
-
-```bash
-nix profile install github:Fission-AI/OpenSpec
-```
-
-After installation, initialize or use OpenSpec inside your project according to
-the OpenSpec documentation and your coding agent's integration.
-
-## 3. Install The Collaboration Skill
-
-Clone the repository, then copy the skill folder into either or both skill
-locations:
-
-```bash
-git clone https://github.com/qiunai/codex-claude-collaboration-skill.git
-cd codex-claude-collaboration-skill
-
-# Install for Codex
-mkdir -p ~/.codex/skills
-cp -R codex-claude-collaboration ~/.codex/skills/
-
-# Install for Claude
-mkdir -p ~/.claude/skills
-cp -R codex-claude-collaboration ~/.claude/skills/
-```
-
-Restart Codex or Claude if the skill list is already loaded in the current
-session.
-
-## One-Paste Bootstrap
-
-This installs the repository, patches/verifies the Codex plugin if it is already
-installed, installs OpenSpec with npm, and copies the skill into both agent
-skill directories:
-
-```bash
-git clone https://github.com/qiunai/codex-claude-collaboration-skill.git
-cd codex-claude-collaboration-skill
-
-node codex-claude-collaboration/scripts/install-codex-plugin-cc-resume-thread.mjs
-npm install -g @fission-ai/openspec@latest
-node codex-claude-collaboration/scripts/migrate-runtime-state.mjs
 
 mkdir -p ~/.codex/skills ~/.claude/skills
 rm -rf ~/.codex/skills/codex-claude-collaboration
 rm -rf ~/.claude/skills/codex-claude-collaboration
 cp -R codex-claude-collaboration ~/.codex/skills/
 cp -R codex-claude-collaboration ~/.claude/skills/
-
-CODEX_COMPANION="${CODEX_COMPANION:-$HOME/.claude/plugins/marketplaces/openai-codex/plugins/codex/scripts/codex-companion.mjs}"
-node codex-claude-collaboration/scripts/verify-codex-companion.mjs \
-  --command "$CODEX_COMPANION"
 ```
 
-If the plugin patch step says no installed plugin root was found, first run the
-Claude Code plugin commands from step 1, then rerun the patch command.
+Restart the current agent session if its skill list was already loaded.
 
-## Requirements
+## OpenSpec
 
-- Codex with local skill support.
-- Claude Desktop when using Desktop delivery.
-- Node.js for bundled validation scripts.
-- Git and `jq`.
-- OpenSpec for proposal/spec-driven collaboration.
-- `codex-companion` available on `PATH` for Claude-to-Codex implementation
-  dispatch, or set `CODEX_COMPANION` to the executable path. Install the Codex
-  plugin first and ensure the broker advertises
-  `task --resume-thread <thread-id> --full-access`.
-- Exact broker continuity uses `codex-companion task --resume-thread <thread-id>
-  --full-access`.
-  Do not use `--resume-last` for automated collaboration routing when multiple
-  Claude/Codex tasks may be active.
-- Full access must be forwarded at both Codex app-server layers: thread
-  start/resume uses sandbox `danger-full-access`, and turn start uses
-  `sandboxPolicy: { type: "dangerFullAccess" }`. If a resumed Codex task can
-  read files but cannot `git add`, write runtime state, or take the Desktop
-  delivery lock, rerun the bundled plugin patch and restart Claude's Codex
-  broker/app-server so stale processes cannot keep the old sandbox behavior.
-- Verify the actual executable before dispatch:
-  `node ~/.claude/skills/codex-claude-collaboration/scripts/verify-codex-companion.mjs --command "$CODEX_COMPANION"`.
-  If `CODEX_COMPANION` points at a `.mjs` plugin script, the workflow invokes it
-  through `node`.
+This workflow works best when project changes are managed with OpenSpec.
+OpenSpec artifacts give Codex and Claude a shared contract:
 
-No personal paths, local project names, tokens, or state files are required by
-the repository. Runtime state is written locally outside the installed skill
-tree, by default under `~/.claude/codex-claude-collaboration/state/`, and
-should not be committed.
+- `proposal.md`: intent and scope.
+- `design.md`: technical approach.
+- `tasks.md`: implementation phases and verification.
+- `specs/*/spec.md`: requirements and scenarios.
 
-## Full Workflow
+Links:
 
-Use this when the user starts in Codex and wants Claude to audit Codex's
-findings before implementation.
+- Website: <https://openspec.dev/>
+- GitHub: <https://github.com/Fission-AI/OpenSpec>
+- Installation docs: <https://github.com/Fission-AI/OpenSpec/blob/main/docs/installation.md>
 
-1. Codex investigates with local tools and writes:
-   `.codex-claude-collaboration/codex-explore-summary.md`
-2. Codex validates the packet:
-   ```bash
-   node ~/.codex/skills/codex-claude-collaboration/scripts/validate-claude-packet.mjs \
-     .codex-claude-collaboration/codex-explore-summary.md
-   ```
-3. Codex resolves local project context:
-   ```bash
-   node ~/.codex/skills/codex-claude-collaboration/scripts/version-context.mjs \
-     --current-version V1.12 \
-     --next-version V1.13 \
-     --version-file path/to/version-file \
-     --changelog-path CHANGELOG.md
+Install:
 
-   node ~/.codex/skills/codex-claude-collaboration/scripts/project-context.mjs \
-     --cwd "$(pwd)" \
-     --version V1.13 \
-     --summary "editor optimization" \
-     --expected-project "$(basename "$(git rev-parse --show-toplevel)")"
-   ```
-4. Codex captures the current Codex thread:
-   ```bash
-   node ~/.codex/skills/codex-claude-collaboration/scripts/codex-session-context.mjs \
-     --thread-id "$CODEX_THREAD_ID"
-   ```
-   Use the Codex thread id as the resume target. Some UI output may call this
-   value a "Codex session ID", but the broker parameter is `thread-id`.
-5. Codex sends a Claude Desktop prompt that starts with:
-   ```text
-   /openspec:explore 
-   ```
-   The space after `explore` is required.
-   Before sending, the Claude Desktop session must be set to Bypass Permission,
-   the newest visible Opus model, and Extra High reasoning.
-6. Claude explores, creates or updates OpenSpec artifacts, and later sends the
-   proposal back to Codex.
-7. Because the packet used `workflow_type=FULL_CODEX_FIRST`, Claude keeps the
-   origin Codex thread id in state and resumes it with `codex-companion task
-   --resume-thread <thread-id>`.
-   Implementation still runs from a worktree based on the pushed proposal
-   branch, because the original Codex exploration worktree may have been
-   created from `main` and may not contain Claude's proposal artifacts.
-8. Codex implements, writes:
-   `.codex-claude-collaboration/implementation-result.json`
-9. Codex reports back through Claude Desktop with:
-   ```text
-   codex-claude DONE <collaboration_id> round <n>: <STATUS> — <PR_URL_OR_NONE>
-   Summary: <short summary>
-   ```
-10. Claude reviews. If clean, Claude archives, comments on the PR, merges, and
-    deletes the remote feature branch without waiting for another user approval.
-    Local branches/worktrees are kept by default. If not, Claude sends rework to
-    the stored Codex thread with `--resume-thread`. Structural
-    Blocking/Harmful/High implementation rounds are capped at three; minor
-    cleanup and merge conflicts continue until clean.
+```bash
+npm install -g @fission-ai/openspec@latest
+```
 
-When the implementation changes the product iteration, the PR should update the
-project version file and Changelog before merge. After merge, future sessions
-read the new version from `main` and use the next version for the following
-iteration.
+## Manual Workflows
 
-## Partial Workflow
+### 1. Codex First
 
-Use this when the user starts in Claude and already has enough context for a
-proposal.
+Use when the user starts in Codex.
 
-1. Claude explores and prepares OpenSpec proposal/design/tasks/specs.
-2. Claude sets `workflow_type=CLAUDE_FIRST`.
-3. Claude creates the first Codex task thread with `codex-companion`.
-4. Codex implements and writes `implementation-result.json`.
-5. Codex reports back through Claude Desktop.
-6. Claude reviews, requests rework, or merges.
+1. User asks Codex to investigate a problem.
+2. Codex gathers evidence and explains what is confirmed, likely, and unknown.
+3. User says: "交给 Claude 进行二次研究".
+4. Codex returns a copy-paste Claude prompt, usually starting with
+   `/openspec:explore `.
+5. User pastes it into Claude.
+6. Claude challenges the analysis and prepares proposal/design/tasks/specs if
+   needed.
+7. User says: "交给 Codex 执行".
+8. A copy-paste Codex prompt is prepared. It must start with `/goal`.
 
-## Safety Rules
+### 2. Claude First
 
-- Do not infer workflow type. The entry agent must set it.
-- `FULL_CODEX_FIRST` requires `origin_codex_thread_id`.
-- `CLAUDE_FIRST` is only for cases with no prior Codex thread.
-- Use `codex-companion task --resume-thread <thread-id>` for Codex re-entry.
-- Treat `--resume-last` as unsafe for automated routing: it means "latest
-  resumable task in the current context", not "the task that belongs to this
-  Claude conversation".
-- Codex implementation must run in a worktree based on the pushed proposal
-  branch. Do not assume a Codex-first exploration worktree created from `main`
-  contains Claude's proposal files.
-- Runtime collaboration state must be created before Codex starts and should
-  live under `~/.claude/codex-claude-collaboration/state/`, not inside the
-  installed skill directory.
-- When upgrading from an older version, run
-  `node codex-claude-collaboration/scripts/migrate-runtime-state.mjs` before
-  deleting or replacing installed skill directories.
-- If exact resume is unavailable in an older broker, stop and upgrade/patch the
-  broker instead of falling back to `--resume-last` in a concurrent workflow.
-- Run `phase-guard.mjs` before any Computer Use send.
-- Do not touch Claude Desktop unless the FIFO lock is acquired.
-- For new Claude Desktop exploration sessions, inspect and repair:
-  - Local project selected.
-  - Project name matches the current repository.
-  - Branch is `main`.
-  - Worktree is enabled.
-  - Permission mode is `Bypass Permission`.
-  - Model is the newest visible Opus option.
-  - Reasoning level is `Extra High`.
-  - Prompt starts with `/openspec:explore `.
-  - Session is renamed with a product version prefix such as
-    `V1.13 editor optimization`.
-  - Session is moved into the correct project group.
+Use when the user starts in Claude.
 
-## Repository Layout
+1. Claude explores and writes a proposal or implementation plan.
+2. User asks for a Codex execution prompt.
+3. The prompt starts with `/goal` and tells Codex what to read, implement, run,
+   and return.
+4. User pastes the Codex result back to Claude for review.
+
+### 3. Review And Rework
+
+1. Codex returns implementation status, validations, PR/diff pointers, and known
+   risks.
+2. User asks to prepare Claude review.
+3. Claude classifies findings as `Blocking`, `High`, or `Minor`.
+4. If rework is needed, user asks to prepare a Codex rework prompt.
+5. Rework prompt starts with `/goal` and includes only the findings to fix plus
+   necessary context.
+
+## Prompt Principles
+
+- Put the current task first.
+- Keep common constraints short.
+- Use evidence labels:
+  `[CONFIRMED]`, `[LIKELY]`, `[UNKNOWN]`, `[USER-OBSERVED]`.
+- Do not present guesses as facts.
+- Do not paste giant logs unless they are the artifact being reviewed.
+- Ask for a specific output format.
+- For Codex execution or rework, the prompt must begin with `/goal`.
+
+## Output Format
+
+When preparing a handoff, the agent should respond with a copyable prompt:
+
+````text
+下面是给 <Claude/Codex> 的手动传递提示词，直接复制粘贴即可：
 
 ```text
-codex-claude-collaboration/
-  SKILL.md
-  OPERATIONS.md
-  BASELINE.md
-  review-checklist.md
-  scripts/
-  state/README.md
-  templates/
+<prompt>
+```
+````
+
+If important information is missing, add a short "缺失信息" list before the
+prompt. If the missing information changes the safety or meaning of the task,
+ask the user first.
+
+## Example: Codex To Claude
+
+```text
+/openspec:explore 请基于以下材料做二次研究。不要默认接受 Codex 的结论；请找隐藏风险、反例和更好的方案。
+
+项目: Bean Boss
+主题: 图片编辑器裁剪预览和导出不一致
+
+本轮重点:
+- 检查 crop canvas、preview canvas、export pipeline 的坐标换算是否一致。
+- 判断是否需要 OpenSpec 变更。
+
+证据:
+- [CONFIRMED] apps/web/.../crop-canvas.tsx 使用显示尺寸计算交互坐标。
+- [LIKELY] export pipeline 可能使用 natural size,需要核对 scale 转换。
+- [UNKNOWN] DPR 和移动端 viewport 是否影响导出结果。
+
+请输出:
+1. 风险和反例。
+2. 是否需要 proposal。
+3. 如需要,建议 change id 和 proposal/design/tasks 要点。
 ```
 
-## Development Purpose
+## Example: Claude To Codex
 
-This skill exists to make cross-model collaboration precise, auditable, and
-repeatable:
+```text
+/goal 执行 OpenSpec 变更 image-crop-export-alignment-v1-13。使用当前 Codex workspace。
 
-- Codex contributes tool access, implementation, browser/desktop automation, and
-  evidence collection.
-- Claude contributes deep review, OpenSpec exploration, proposal quality, and
-  merge judgment.
-- Both agents preserve provenance instead of turning assumptions into facts.
+目标:
+- 按 OpenSpec proposal/design/tasks 实现裁剪预览与导出一致性。
 
-The goal is not to make one model blindly trust the other. The goal is to move
-evidence, uncertainty, and decisions through a controlled loop where each side
-can challenge the other.
+读取:
+1. SCOPE.md / AGENTS.md
+2. openspec/changes/image-crop-export-alignment-v1-13/proposal.md
+3. openspec/changes/image-crop-export-alignment-v1-13/design.md
+4. openspec/changes/image-crop-export-alignment-v1-13/tasks.md
+5. openspec/changes/image-crop-export-alignment-v1-13/specs/*/spec.md
+
+执行:
+- 按 tasks.md 顺序实现。
+- 保持改动范围最小。
+- 运行相关验证: openspec validate、typecheck、lint、test、build。
+
+完成后返回:
+- 状态: READY_FOR_REVIEW / BLOCKED / FAILED
+- 变更摘要
+- 验证命令与结果
+- PR URL 或本地分支
+- 已知风险和需要 Claude review 的点
+```
