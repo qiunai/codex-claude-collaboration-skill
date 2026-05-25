@@ -35,10 +35,14 @@ copy.
 2. User asks to hand off to Claude.
 3. Codex outputs a Claude prompt for manual paste.
 4. Claude explores, challenges assumptions, and may create an OpenSpec proposal.
-5. User asks to hand off to Codex.
-6. Codex outputs a `/goal` implementation prompt for manual paste into Codex.
-7. Codex implementation result is manually pasted back to Claude for review.
-8. Claude either accepts, asks for targeted rework, or tells the user what
+5. Before handoff to Codex, Claude must commit proposal artifacts and push the
+   proposal branch to the remote.
+6. User asks to hand off to Codex.
+7. Codex outputs a `/goal` implementation prompt for manual paste into Codex.
+8. Codex fetches the named remote branch, works in its own implementation
+   branch/worktree, commits, pushes, and opens or updates a PR.
+9. Codex implementation result is manually pasted back to Claude for review.
+10. Claude reviews the PR branch, accepts, asks for targeted rework, or tells the user what
    decision is needed.
 
 No step should require hidden state from another app. Each prompt must carry the
@@ -67,6 +71,10 @@ Prioritize content in this order:
 Never disguise a hypothesis as a fact. If the earlier agent is uncertain, make
 that uncertainty visible.
 
+Keep handoff prompts compact. Target under 3000 characters and do not exceed
+4000 unless the user explicitly asks for a full archival prompt. Prefer branch
+names, file paths, PR URLs, and short evidence bullets over pasted documents.
+
 ## Claude Research Prompt
 
 Use this when Codex has investigated and the user wants Claude to perform a
@@ -81,6 +89,8 @@ The prompt should:
   unknowns, and desired proposal scope.
 - Ask Claude to output either: `NO_CHANGE_NEEDED`, `NEEDS_MORE_INFO`, or an
   OpenSpec proposal plan with change id suggestion.
+- If Claude creates a proposal, require Claude to commit and push the proposal
+  branch before asking the user to hand it to Codex.
 
 Use `templates/codex-to-claude-research.md` as the shape.
 
@@ -92,12 +102,19 @@ implementation plan and the user wants Codex to execute.
 Rules:
 
 - The prompt must begin with `/goal` as the first characters.
-- Tell Codex which repo/worktree/branch it should use, if known. If unknown,
-  say "use the current Codex workspace" instead of inventing paths.
+- Include the remote proposal branch that Claude already pushed. If unknown,
+  ask the user for it before writing an execution prompt.
+- Use branch names without the `origin/` prefix in prompt variables, for example
+  `feat/image-crop-v1-13`; the prompt can refer to `origin/<branch>` as the
+  fetched base.
+- Tell Codex to fetch that branch and create/use its own implementation branch
+  or worktree based on it.
 - Tell Codex to read `SCOPE.md`, `AGENTS.md`, OpenSpec proposal/design/tasks,
   and delta specs when they exist.
-- Tell Codex to implement by task order, verify, commit/push/open PR only if the
-  user expects that behavior.
+- Tell Codex to implement by task order. The first infrastructure phase is
+  serial; later independent phases may use up to 6 sub-agents. The main Codex
+  agent owns git, validation, task status, and PR creation.
+- Tell Codex to commit, push, and open or update a PR at completion.
 - Tell Codex to finish with a copyable result summary for manual Claude review.
 - Do not include automatic delivery or hidden-state instructions.
 
@@ -170,7 +187,7 @@ Example 1: Codex to Claude research
 Example 2: Claude to Codex implementation
 
 ```text
-/goal 执行 OpenSpec 变更 image-crop-preview-alignment-v1-13。使用当前 Codex workspace。
+/goal 执行 OpenSpec 变更 image-crop-preview-alignment-v1-13。Claude 已 commit 并 push proposal 分支: feat/image-crop-preview-alignment-v1-13。Codex 从 origin/feat/image-crop-preview-alignment-v1-13 创建自己的实现分支,完成后提交 PR。
 
 读取:
 1. SCOPE.md / AGENTS.md
@@ -181,6 +198,6 @@ Example 2: Claude to Codex implementation
 - 状态: READY_FOR_REVIEW / BLOCKED / FAILED
 - 变更摘要
 - 验证命令和结果
-- PR URL 或本地分支
+- PR URL / 分支 / commit
 - 已知风险
 ```

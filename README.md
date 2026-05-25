@@ -12,9 +12,11 @@ Use Codex and Claude as two independent reviewers:
 1. Codex investigates with local tools and summarizes evidence.
 2. The user asks Codex to prepare a prompt for Claude.
 3. Claude challenges the analysis and may create an OpenSpec proposal.
-4. The user asks Claude or Codex to prepare a prompt for Codex execution.
-5. Codex implements and returns a review summary.
-6. The user copies the result back to Claude for review.
+4. Claude commits and pushes the proposal branch.
+5. The user asks Claude or Codex to prepare a prompt for Codex execution.
+6. Codex fetches that remote branch, implements in its own branch/worktree, then
+   commits, pushes, and opens or updates a PR.
+7. The user copies the result back to Claude for review.
 
 The goal is better judgment through cross-review, not automatic message passing.
 
@@ -71,18 +73,21 @@ Use when the user starts in Codex.
 5. User pastes it into Claude.
 6. Claude challenges the analysis and prepares proposal/design/tasks/specs if
    needed.
-7. User says: "交给 Codex 执行".
-8. A copy-paste Codex prompt is prepared. It must start with `/goal`.
+7. Claude commits proposal artifacts and pushes the proposal branch.
+8. User says: "交给 Codex 执行".
+9. A copy-paste Codex prompt is prepared. It must start with `/goal` and name
+   the remote proposal branch.
 
 ### 2. Claude First
 
 Use when the user starts in Claude.
 
 1. Claude explores and writes a proposal or implementation plan.
-2. User asks for a Codex execution prompt.
-3. The prompt starts with `/goal` and tells Codex what to read, implement, run,
-   and return.
-4. User pastes the Codex result back to Claude for review.
+2. Claude commits and pushes the proposal branch.
+3. User asks for a Codex execution prompt.
+4. The prompt starts with `/goal`, names the remote proposal branch, and tells
+   Codex what to read, implement, verify, commit, push, PR, and return.
+5. User pastes the Codex result back to Claude for review.
 
 ### 3. Review And Rework
 
@@ -104,6 +109,10 @@ Use when the user starts in Claude.
 - Do not paste giant logs unless they are the artifact being reviewed.
 - Ask for a specific output format.
 - For Codex execution or rework, the prompt must begin with `/goal`.
+- For Codex implementation, include the pushed remote proposal branch and require
+  Codex to create/update a PR.
+- Keep handoff prompts under 4000 characters unless the user explicitly asks for
+  a full archival prompt.
 
 ## Output Format
 
@@ -147,7 +156,7 @@ ask the user first.
 ## Example: Claude To Codex
 
 ```text
-/goal 执行 OpenSpec 变更 image-crop-export-alignment-v1-13。使用当前 Codex workspace。
+/goal 执行 OpenSpec 变更 image-crop-export-alignment-v1-13。Claude 已 commit 并 push proposal 分支: feat/image-crop-export-alignment-v1-13。Codex 从 origin/feat/image-crop-export-alignment-v1-13 创建自己的实现分支,完成后提交 PR。
 
 目标:
 - 按 OpenSpec proposal/design/tasks 实现裁剪预览与导出一致性。
@@ -160,9 +169,13 @@ ask the user first.
 5. openspec/changes/image-crop-export-alignment-v1-13/specs/*/spec.md
 
 执行:
+- fetch proposal 分支,不要从 main 直接实现。
 - 按 tasks.md 顺序实现。
+- 先串行完成第一个基础 phase;后续独立 phase 可用最多 6 个子代理,主 Codex 负责 git/验证/PR。
+- 从远端 proposal 分支创建自己的实现分支或 worktree。
 - 保持改动范围最小。
 - 运行相关验证: openspec validate、typecheck、lint、test、build。
+- 完成后 commit、push、创建或更新 PR。
 
 完成后返回:
 - 状态: READY_FOR_REVIEW / BLOCKED / FAILED

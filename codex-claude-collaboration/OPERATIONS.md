@@ -26,10 +26,14 @@ Use `templates/codex-to-claude-research.md`.
 When the user says "交给 Codex 执行":
 
 1. Identify the OpenSpec change id or implementation plan.
-2. Identify the current repo/workspace if known.
+2. Confirm Claude has committed proposal artifacts and pushed a remote branch.
+   If the remote branch is unknown, ask for it. Use the branch name without
+   `origin/`, for example `feat/image-crop-v1-13`.
 3. Make the first characters `/goal`.
-4. Tell Codex what to read, implement, verify, and return.
-5. Keep generic process text short.
+4. Tell Codex to fetch the remote branch into its own implementation
+   branch/worktree.
+5. Tell Codex what to read, implement, verify, commit, push, PR, and return.
+6. Keep generic process text short.
 
 Use `templates/claude-to-codex-implementation.md`.
 
@@ -65,6 +69,8 @@ Before returning a handoff prompt:
   - Codex implementation/rework: `/goal`
 - Is the current task detailed enough?
 - Are routine constraints short?
+- Does the Codex prompt name the remote proposal branch?
+- Does it require commit + push + PR?
 - Are facts labeled separately from hypotheses?
 - Are missing assumptions visible?
 - Is the requested output explicit?
