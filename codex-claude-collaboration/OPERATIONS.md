@@ -1,6 +1,6 @@
-# Manual Operations (V9)
+# Manual Operations (V10)
 
-V9 is copy-paste only. Do not automate delivery between agents.
+V10 is copy-paste only. Do not automate delivery between agents.
 
 ## Manual Boundary
 
@@ -71,6 +71,8 @@ Before returning a handoff prompt:
 - Are routine constraints short?
 - Does the Codex prompt name the remote proposal branch?
 - Does it require commit + push + PR?
+- Does it preserve SCOPE/tasks/evidence/sub-agent/git rules without exceeding
+  the prompt budget?
 - Are facts labeled separately from hypotheses?
 - Are missing assumptions visible?
 - Is the requested output explicit?

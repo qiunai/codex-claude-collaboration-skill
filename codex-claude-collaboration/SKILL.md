@@ -7,13 +7,19 @@ description: >-
   Codex-Claude review loop through user copy-paste.
 ---
 
-# Codex-Claude Collaboration (V9)
+# Codex-Claude Collaboration (V10)
 
-V9 is manual-only. The skill does not start another agent, operate UI, route
+V10 is manual-only. The skill does not start another agent, operate UI, route
 tasks, preserve hidden handoff state, or send messages automatically.
 
 Your job is to prepare a clear copy-paste prompt for the user. The user decides
 where to paste it.
+
+V10 keeps the important engineering contract from the original handoff flow:
+Claude must commit and push proposal artifacts before Codex starts; Codex must
+fetch that remote branch, implement on its own branch/worktree, validate,
+commit, push, and open/update a PR; Claude reviews the PR and either accepts or
+returns focused rework.
 
 ## Core Modes
 
@@ -111,9 +117,9 @@ Rules:
   or worktree based on it.
 - Tell Codex to read `SCOPE.md`, `AGENTS.md`, OpenSpec proposal/design/tasks,
   and delta specs when they exist.
-- Tell Codex to implement by task order. The first infrastructure phase is
-  serial; later independent phases may use up to 6 sub-agents. The main Codex
-  agent owns git, validation, task status, and PR creation.
+- Tell Codex to implement by task order. The first foundation phase is serial;
+  later independent phases may use up to 6 sub-agents. The main Codex agent
+  owns git, validation, task status, evidence, and PR creation.
 - Tell Codex to commit, push, and open or update a PR at completion.
 - Tell Codex to finish with a copyable result summary for manual Claude review.
 - Do not include automatic delivery or hidden-state instructions.
@@ -134,6 +140,9 @@ The prompt should ask Claude to:
   back to Codex.
 
 Use `templates/codex-to-claude-review.md` as the shape.
+
+When the user asks Claude to review a PR, use `review-checklist.md` as the
+manual audit frame.
 
 ## Codex Rework Prompt
 

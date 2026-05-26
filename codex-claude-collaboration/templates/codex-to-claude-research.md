@@ -34,7 +34,7 @@
 1. 你不同意或需要修正 Codex 判断的地方。
 2. 隐藏风险、反例、边界条件。
 3. 是否需要 OpenSpec 变更。
-4. 如果需要,创建 OpenSpec proposal/design/tasks/spec。
-5. 完成 proposal 后先 commit 并 push 到远端 proposal 分支(建议 `feat/<change-id>`)。
-6. 返回: change id、远端分支名、commit、下一步给 Codex 的执行要点。
+4. 如果需要,创建 OpenSpec proposal/design/tasks/spec;tasks.md 必须给出 phase、验证 gate、done 标准。
+5. 完成 proposal 后先 validate、commit 并 push 到远端 proposal 分支(建议 `feat/<change-id>`)。
+6. 返回: change id、远端分支名、commit、Codex 执行重点和 reviewer 风险点。
 7. 如果信息不足,列出最少需要补充的信息。

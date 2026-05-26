@@ -1,4 +1,4 @@
-请 review 下面的 Codex 实施结果。请不要默认接受 Codex 的结论,按证据和 diff 独立判断。
+请 review Codex 实施结果。不要默认接受结论;按 PR diff、OpenSpec、证据独立判断。
 
 ## 目标
 
@@ -11,28 +11,24 @@
 - OpenSpec change: {{CHANGE}}
 - 摘要: {{SUMMARY}}
 
-## 修改范围
+## 验证与证据
 
-{{CHANGED_FILES}}
-
-## 验证
-
-{{VALIDATION}}
-
-## 证据
-
-{{EVIDENCE}}
+{{VALIDATION_AND_EVIDENCE}}
 
 ## 已知风险 / 未完成项
 
 {{KNOWN_GAPS}}
 
-## 请 Claude 输出
+## Review 方法
 
-1. 最终判定: ACCEPT / REWORK_REQUIRED / NEEDS_USER_DECISION。
-2. Findings,按严重度分为:
-   - `Blocking`: 会阻止合并的问题。
-   - `High`: 高概率用户可见回归或明确 spec 不符。
-   - `Minor`: 不阻止合并的小问题。
-3. 如果需要 rework,给出可直接复制给 Codex 的 focused rework prompt。
-4. 如果可以合并/发布,明确写 ACCEPT,并列出合并或发布前最后需要确认的事项。
+按 `review-checklist.md` 审查: OpenSpec、SCOPE、foundation、实现 fidelity、tasks honesty、证据、git hygiene、无歧义路由。
+
+## 请输出
+
+1. OpenSpec validate: PASS / FAIL。
+2. Findings 表: Blocking / High / Medium / Low,含位置和修法。
+3. Task honesty: `[x]` 是否有真实 diff + 证据。
+4. Verdict:
+   - ACCEPT: spec valid、无 Blocking/High、证据可信、gate 绿。
+   - REWORK_REQUIRED: 有必须修复问题,给出可复制给 Codex 的 focused rework prompt。
+   - NEEDS_USER_DECISION: 范围/产品方向需用户判断。

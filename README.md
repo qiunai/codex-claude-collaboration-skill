@@ -2,7 +2,8 @@
 
 Manual prompt handoff between Codex and Claude.
 
-V9 removes automated agent-to-agent delivery. The skill only helps an agent
+V10 keeps manual copy-paste handoff and restores the important engineering
+contract from the original workflow. The skill only helps an agent
 prepare clean prompts that the user copies between Codex and Claude.
 
 ## Purpose
@@ -19,6 +20,9 @@ Use Codex and Claude as two independent reviewers:
 7. The user copies the result back to Claude for review.
 
 The goal is better judgment through cross-review, not automatic message passing.
+The delivery contract is explicit: Claude commits and pushes the proposal
+branch; Codex fetches that branch, implements on its own branch/worktree,
+validates, commits, pushes, and opens/updates a PR; Claude reviews the PR.
 
 ## Install
 
@@ -113,6 +117,9 @@ Use when the user starts in Claude.
   Codex to create/update a PR.
 - Keep handoff prompts under 4000 characters unless the user explicitly asks for
   a full archival prompt.
+- Preserve core execution discipline: SCOPE first, tasks.md as phase truth,
+  foundation phase serial, up to 6 sub-agents for independent phases, evidence
+  for checked tasks, no force-push/amend/no-verify.
 
 ## Output Format
 

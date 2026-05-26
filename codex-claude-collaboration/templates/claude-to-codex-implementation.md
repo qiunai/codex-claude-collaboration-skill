@@ -1,52 +1,40 @@
-/goal 执行 {{CHANGE_OR_TASK}}。Claude 已提交并 push proposal 分支: {{REMOTE_PROPOSAL_BRANCH}}。Codex 必须从该远端分支创建自己的实现分支/worktree,完成后提交 PR。
+/goal 执行 OpenSpec 变更 {{CHANGE}}。Claude 已 commit+push proposal 分支 `{{REMOTE_PROPOSAL_BRANCH}}`;Codex 从 `origin/{{REMOTE_PROPOSAL_BRANCH}}` 创建自己的实现分支/worktree,完成后开/更 PR。
 
-## 目标
+## 0. 分支合同
 
-{{GOAL}}
-
-## 分支合同
-
-- fetch: `git fetch origin {{REMOTE_PROPOSAL_BRANCH}}`
+- `git fetch origin {{REMOTE_PROPOSAL_BRANCH}}`
 - base: `origin/{{REMOTE_PROPOSAL_BRANCH}}`
-- local: `codex/{{CHANGE_ID}}`
-- push/PR: push 到远端实现分支并创建或更新 PR
-- 如果 proposal 文件不在该分支,停止并报告 BLOCKED
+- local: `codex/{{CHANGE}}`
+- 如果 `openspec/changes/{{CHANGE}}/proposal.md` 不存在,停止并报 `BLOCKED: proposal branch missing artifacts`
+- 完成后 push 实现分支并创建/更新 PR;不要直接改 main
 
-## 必读
+## 1. 必读
 
-{{READING_LIST}}
-
-如果项目使用 OpenSpec,优先读取:
 1. SCOPE.md / AGENTS.md (如存在)
-2. openspec/changes/<change>/proposal.md
-3. openspec/changes/<change>/design.md
-4. openspec/changes/<change>/tasks.md
-5. openspec/changes/<change>/specs/*/spec.md
+2. `openspec/changes/{{CHANGE}}/{proposal,design,tasks}.md`
+3. `openspec/changes/{{CHANGE}}/specs/*/spec.md`
 
-## 实施要求
+tasks.md 是 phase 与 task 真源;design/spec 是验收标准。本 prompt 只规定执行纪律。
 
-{{IMPLEMENTATION_REQUIREMENTS}}
+## 2. 执行纪律
 
-默认约束:
-- 先串行完成第一个基础 phase;后续独立 phase 可用最多 6 个子代理。
-- 子代理只写代码/分析;主 Codex 负责 git、任务状态、验证、PR。
-- 保持改动范围最小。
-- 遵循现有项目风格。
-- 不重构无关代码。
-- 不伪造测试、证据或完成状态。
-- 禁止 force-push、amend、--no-verify。
+- 严守 SCOPE.md;不碰禁区,不扩 scope,不新增 spec 未声明能力/依赖。
+- 第一个 foundation phase 串行完成并过 gate;后续独立 phase 可用最多 6 个子代理。
+- 子代理只写代码/分析;主 Codex 独占 tasks.md、验证、git、PR。
+- 每个 `[x]` 必须有真实证据:命令输出/截图/JSON/日志/导出文件等,路径写入 `reports/evidence/` 或 PR 摘要。
+- 禁止假 `[x]`、吞错、空证据、force-push、amend、--no-verify、`git add -A`。
 
-## 验证
+## 3. 验证与提交
 
-{{VALIDATION_COMMANDS}}
+- 按 phase 收口:验证 → selective `git add <files>` → commit → push。
+- 默认 gate: `openspec validate {{CHANGE}}`;项目 typecheck/lint/test/build;其他以 design/tasks 为准。
+- 失败先修;仍无法闭环则保持 `[ ]` 并写具体原因,列入 Known gaps。
 
-如果某条验证无法运行,说明原因和剩余风险。
+## 4. 收尾
 
-## 完成后返回
-
-- 状态: READY_FOR_REVIEW / BLOCKED / FAILED
-- 变更摘要
-- 修改文件
-- 验证命令与结果
-- PR URL / 分支 / commit
-- 已知风险或需要 Claude review 的点
+- 最终全量验证全绿后,提交收尾 commit。
+- 创建/更新 PR 到 main,PR body 写 Summary / Validation / Tasks / Known gaps / Reviewer pointers。
+- 最终只返回:
+  - 状态: READY_FOR_REVIEW / BLOCKED / FAILED
+  - PR URL、分支、commit
+  - 变更摘要、验证结果、证据路径、Known gaps
